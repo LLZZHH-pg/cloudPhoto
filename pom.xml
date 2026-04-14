@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.5</version>
+        <version>3.5.8</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.LAB.study</groupId>
@@ -24,7 +24,7 @@
     <modules>
         <module>common</module>
         <module>gateway-service</module>
-        <module>uesr-service</module>
+        <module>user-service</module>
         <module>photomanage-service</module>
         <module>albummanage-service</module>
     </modules>
@@ -35,28 +35,50 @@
         <url/>
     </scm>
     <properties>
-        <java.version>17</java.version>
+        <java.version>23</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc</artifactId>
-        </dependency>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>2025.0.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>2025.0.0.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
 
+        </dependencies>
+    </dependencyManagement>
     <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                    <configuration>
+                        <source>${java.version}</source>
+                        <target>${java.version}</target>
+                        <encoding>${project.build.sourceEncoding}</encoding>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 
 </project>

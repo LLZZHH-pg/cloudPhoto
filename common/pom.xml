@@ -8,13 +8,27 @@
         <artifactId>cloudPhoto</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
-
     <artifactId>common</artifactId>
+    <packaging>jar</packaging>
+    <name>common</name>
 
-    <properties>
-        <maven.compiler.source>23</maven.compiler.source>
-        <maven.compiler.target>23</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+        </dependency>
+
+    </dependencies>
+
 
 </project>
