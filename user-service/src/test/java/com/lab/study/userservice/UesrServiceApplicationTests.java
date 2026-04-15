@@ -1,4 +1,4 @@
-package com.lab.study.uesrservice;
+package com.lab.study.userservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
