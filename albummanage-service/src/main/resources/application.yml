@@ -10,4 +10,3 @@ spring:
             config:
                 server-addr: localhost:8848
                 file-extension: yml
-
