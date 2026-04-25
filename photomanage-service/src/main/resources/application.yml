@@ -2,7 +2,7 @@ spring:
     application:
         name: photomanage-service
     config:
-        import: nacos:photomanage-service-dev.yml
+        import: nacos:photomanage-service-dev
     cloud:
         nacos:
             discovery:

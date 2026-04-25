@@ -2,7 +2,7 @@ spring:
     application:
         name: user-service
     config:
-        import: nacos:user-service-dev.yml
+        import: nacos:user-service-dev
     cloud:
         nacos:
             discovery:

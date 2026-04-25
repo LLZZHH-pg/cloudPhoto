@@ -2,7 +2,7 @@ spring:
     application:
         name: albummanage-service
     config:
-        import: nacos:albummanage-service-dev.yml
+        import: nacos:albummanage-service-dev
     cloud:
         nacos:
             discovery:
@@ -10,4 +10,5 @@ spring:
             config:
                 server-addr: localhost:8848
                 file-extension: yml
+
 

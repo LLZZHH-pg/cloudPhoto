@@ -2,7 +2,7 @@ spring:
     application:
         name: gateway-service
     config:
-        import: nacos:gateway-service-dev.yml
+        import: nacos:gateway-service-dev
     cloud:
         nacos:
             discovery:
