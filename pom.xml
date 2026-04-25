@@ -56,6 +56,12 @@
                 <scope>import</scope>
             </dependency>
 
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>3.5.15</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
     <build>
