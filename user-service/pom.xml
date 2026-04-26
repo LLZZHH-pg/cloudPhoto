@@ -75,7 +75,7 @@
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
         </dependency>
 
-        <!-- 5. JWT 依赖 (上一轮已解决，此处补全保持完整) -->
+        <!-- 5. JWT 依赖 (上一轮已解决此处补全保持完整) -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
