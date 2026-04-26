@@ -23,7 +23,6 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     @Value("${jwt.secret:defaultSecret}")
     private String secret;
 
-    // JWT token在请求头中的键名
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
 
@@ -31,45 +30,43 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
 
-        // 获取请求路径，对某些公共接口跳过认证
         String path = request.getURI().getPath();
         if (isPublicEndpoint(path)) {
+            log.info("Public endpoint accessed: {}", path);
             return chain.filter(exchange);
         }
 
         String token = getTokenFromRequest(request);
 
         if (!StringUtils.hasText(token)) {
-            log.warn("Token is missing in request header");
+            log.warn("Token is missing in request header for path: {}", path);
             return handleUnauthorizedResponse(exchange);
         }
 
         try {
-            // 解析JWT令牌
             Jws<Claims> claims = Jwts.parserBuilder()
                     .setSigningKey(secret.getBytes())
                     .build()
                     .parseClaimsJws(token);
 
-            // 验证令牌是否过期
             if (claims.getBody().getExpiration().before(new java.util.Date())) {
-                log.warn("Token has expired");
+                log.warn("Token has expired for path: {}", path);
                 return handleUnauthorizedResponse(exchange);
             }
 
-            // 将用户信息添加到请求头中传递给下游服务
             String userId = (String) claims.getBody().get("userId");
-            String username = claims.getBody().getSubject(); // 直接赋值即可
+            String username = claims.getBody().getSubject();
+
             ServerHttpRequest mutatedRequest = request.mutate()
                     .header("X-User-Id", userId)
                     .header("X-Username", username)
                     .build();
 
-            log.info("JWT validation successful for user: {}", username);
+            log.info("JWT validation successful for user: {}, path: {}", username, path);
             return chain.filter(exchange.mutate().request(mutatedRequest).build());
 
         } catch (Exception e) {
-            log.error("JWT validation failed: {}", e.getMessage());
+            log.error("JWT validation failed for path: {}: {}", path, e.getMessage());
             return handleUnauthorizedResponse(exchange);
         }
     }
@@ -83,11 +80,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     private boolean isPublicEndpoint(String path) {
-        // 定义不需要认证的公共端点
         return path.startsWith("/auth/login") ||
                 path.startsWith("/auth/register") ||
                 path.startsWith("/actuator") ||
-                path.startsWith("/error");
+                path.startsWith("/error") ||
+                path.equals("/api/test");  // 添加这一行，使/api/test成为公共接口
     }
 
     private Mono<Void> handleUnauthorizedResponse(ServerWebExchange exchange) {
@@ -105,7 +102,6 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        // 设置过滤器顺序，值越小优先级越高
         return -1;
     }
 }
