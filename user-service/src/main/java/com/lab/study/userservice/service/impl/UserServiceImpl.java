@@ -5,10 +5,15 @@ import com.lab.study.userservice.entity.User;
 import com.lab.study.userservice.mapper.UserMapper;
 import com.lab.study.userservice.service.UserService;
 import com.lab.study.userservice.utils.JwtUtil;
+import io.jsonwebtoken.security.Keys;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -19,6 +24,12 @@ import java.util.concurrent.TimeUnit;
  */
 @Service // 注意：注解打在实现类上
 public class UserServiceImpl implements UserService {
+
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${jwt.expiration}")
+    private Long jwtExpiration;
 
     @Autowired
     private UserMapper userMapper;
@@ -45,11 +56,12 @@ public class UserServiceImpl implements UserService {
         }
 
         // 3. 生成 JWT
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getUserId());
         claims.put("username", user.getNam());
-        String token = JwtUtil.createJWT("cloud-photo-key", 3600000L, claims);
-
+        String token = JwtUtil.createJWT(key, "cloud-photo-key", jwtExpiration, claims);
         // 4. 存入 Redis
         //String redisKey = "login:token:" + user.getUserId();
         //redisTemplate.opsForValue().set(redisKey, token, 60, TimeUnit.MINUTES);

@@ -34,8 +34,12 @@ public class UserController {
      */
     @PostMapping("/register")
     public ResultVo register(@RequestBody User user) {
-        userService.register(user);
-        return ResultVo.success("注册成功");
+        try {
+            userService.register(user);
+            return ResultVo.success("注册成功");
+        } catch (Exception e) {
+            return ResultVo.fail(e.getMessage());
+        }
     }
 
     /**
