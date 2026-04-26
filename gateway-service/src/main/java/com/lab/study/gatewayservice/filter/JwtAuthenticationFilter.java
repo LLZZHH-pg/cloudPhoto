@@ -69,7 +69,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange.mutate().request(mutatedRequest).build());
 
         } catch (Exception e) {
-            log.error("JWT validation failed: {}", e.getMessage());
+            log.error("JWT validation failed for path: {}: {}", path, e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+            // 强制返回 401，避免 500
             return handleUnauthorizedResponse(exchange);
         }
     }
