@@ -1,12 +1,8 @@
 package com.lab.study.gatewayservice.filter;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.SignatureException;
-import io.jsonwebtoken.UnsupportedJwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -27,88 +23,55 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     @Value("${jwt.secret:defaultSecret}")
     private String secret;
 
+    // JWT token在请求头中的键名
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
+
+        // 获取请求路径，对某些公共接口跳过认证
         String path = request.getURI().getPath();
-
-        log.debug("Processing request for path: {}", path);
-
         if (isPublicEndpoint(path)) {
-            log.info("Accessing public endpoint: {}", path);
             return chain.filter(exchange);
         }
 
         String token = getTokenFromRequest(request);
 
         if (!StringUtils.hasText(token)) {
-            log.warn("Missing token in Authorization header for path: {}", path);
-            return handleUnauthorizedResponse(exchange, "No token provided");
+            log.warn("Token is missing in request header");
+            return handleUnauthorizedResponse(exchange);
         }
 
-        // ✅ 关键修复：使用 Mono.defer 包装阻塞操作，确保异常被捕获
-        return Mono.defer(() -> {
-            try {
-                // 🔍 解析 JWT Token
-                Jws<Claims> claims = Jwts.parserBuilder()
-                        .setSigningKey(secret.getBytes())  // 使用配置的密钥
-                        .build()
-                        .parseClaimsJws(token);
+        try {
+            // 解析JWT令牌
+            Jws<Claims> claims = Jwts.parserBuilder()
+                    .setSigningKey(secret.getBytes())
+                    .build()
+                    .parseClaimsJws(token);
 
-                // 检查过期时间
-                if (claims.getBody().getExpiration().before(new java.util.Date())) {
-                    log.warn("Token has expired for path: {} and user: {}", path, claims.getBody().getSubject());
-                    return handleUnauthorizedResponse(exchange, "Token has expired");
-                }
-
-                // ✅ Token 有效，提取用户信息并添加到请求头
-                String userId = (String) claims.getBody().get("userId");
-                String username = claims.getBody().getSubject();
-
-                ServerHttpRequest mutatedRequest = request.mutate()
-                        .header("X-User-Id", userId != null ? userId : "")
-                        .header("X-Username", username != null ? username : "")
-                        .build();
-
-                log.info("JWT validation successful for user: '{}' (ID: {}) on path: {}", username, userId, path);
-
-                return chain.filter(exchange.mutate().request(mutatedRequest).build());
-
-            } catch (MalformedJwtException e) {
-                log.warn("Malformed JWT token for path: {} - {}", path, e.getMessage());
-                return handleUnauthorizedResponse(exchange, "Malformed token");
-
-            } catch (ExpiredJwtException e) {
-                log.warn("Expired JWT token for path: {} - {}", path, e.getMessage());
-                return handleUnauthorizedResponse(exchange, "Token has expired");
-
-            } catch (UnsupportedJwtException e) {
-                log.warn("Unsupported JWT token for path: {} - {}", path, e.getMessage());
-                return handleUnauthorizedResponse(exchange, "Unsupported token format");
-
-            } catch (SignatureException e) {
-                log.warn("Invalid signature for JWT token on path: {} - {}", path, e.getMessage());
-                return handleUnauthorizedResponse(exchange, "Invalid token signature");
-
-            } catch (IllegalArgumentException e) {
-                // 例如：token 为 null 或空
-                log.warn("Illegal argument when parsing JWT for path: {} - {}", path, e.getMessage());
-                return handleUnauthorizedResponse(exchange, "Invalid token format");
-
-            } catch (Exception e) {
-                // 🚨 最后一道防线：捕获所有其他 JWT 相关异常
-                log.error("Unexpected error during JWT validation for path: {} - Exception type: {}, Message: {}",
-                        path, e.getClass().getSimpleName(), e.getMessage(), e);
-                return handleUnauthorizedResponse(exchange, "Invalid token");
+            // 验证令牌是否过期
+            if (claims.getBody().getExpiration().before(new java.util.Date())) {
+                log.warn("Token has expired");
+                return handleUnauthorizedResponse(exchange);
             }
-        }).onErrorMap(Exception.class, ex -> {
-            // 🛡️ 额外防护：如果 Mono.defer 内部抛出异常仍未被捕获，这里兜底
-            log.error("Critical error in JWT filter for path: {} - {}", path, ex.getMessage(), ex);
-            return new RuntimeException("JWT filter internal error", ex);
-        });
+
+            // 将用户信息添加到请求头中传递给下游服务
+            String userId = (String) claims.getBody().get("userId");
+            String username = claims.getBody().getSubject(); // 直接赋值即可
+            ServerHttpRequest mutatedRequest = request.mutate()
+                    .header("X-User-Id", userId)
+                    .header("X-Username", username)
+                    .build();
+
+            log.info("JWT validation successful for user: {}", username);
+            return chain.filter(exchange.mutate().request(mutatedRequest).build());
+
+        } catch (Exception e) {
+            log.error("JWT validation failed: {}", e.getMessage());
+            return handleUnauthorizedResponse(exchange);
+        }
     }
 
     private String getTokenFromRequest(ServerHttpRequest request) {
@@ -120,25 +83,20 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     private boolean isPublicEndpoint(String path) {
+        // 定义不需要认证的公共端点
         return path.startsWith("/auth/login") ||
                 path.startsWith("/auth/register") ||
                 path.startsWith("/actuator") ||
-                path.startsWith("/error") ||
-                path.equals("/api/test");  // 让 /api/test 成为公共接口
+                path.startsWith("/error");
     }
 
-    private Mono<Void> handleUnauthorizedResponse(ServerWebExchange exchange, String reason) {
+    private Mono<Void> handleUnauthorizedResponse(ServerWebExchange exchange) {
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(HttpStatus.UNAUTHORIZED);
 
-        String body = String.format("{\"code\": 401, \"message\": \"Unauthorized: %s\", \"path\": \"%s\"}",
-                reason, exchange.getRequest().getURI().getPath());
-        byte[] bytes = body.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-
+        String body = "{\"code\": 401, \"message\": \"Unauthorized: Invalid or missing token\"}";
+        byte[] bytes = body.getBytes();
         response.getHeaders().add("Content-Type", "application/json;charset=UTF-8");
-
-        log.debug("Sending 401 response for path: {}, reason: {}",
-                exchange.getRequest().getURI().getPath(), reason);
 
         return response.writeWith(
                 Mono.just(response.bufferFactory().wrap(bytes))
@@ -147,6 +105,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return -1; // 确保在路由过滤器之前执行
+        // 设置过滤器顺序，值越小优先级越高
+        return -1;
     }
 }

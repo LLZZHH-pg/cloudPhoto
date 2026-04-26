@@ -1,21 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.LAB.study</groupId>
         <artifactId>cloudPhoto</artifactId>
         <version>0.0.1-SNAPSHOT</version>
-        <relativePath/>
+        <relativePath/> <!-- lookup parent from repository -->
     </parent>
+
     <artifactId>gateway-service</artifactId>
     <name>gateway-service</name>
     <description>Gateway service for cloud photo storage system</description>
 
+    <!-- ✅ 修复：统一 Java 23 版本 -->
     <properties>
-        <java.version>11</java.version>
-        <spring-cloud.version>2021.0.5</spring-cloud.version>
-        <spring-cloud-alibaba.version>2021.0.4.0</spring-cloud-alibaba.version>
+        <java.version>23</java.version>
+        <maven.compiler.source>23</maven.compiler.source>
+        <maven.compiler.target>23</maven.compiler.target>
+        <maven.compiler.release>23</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Spring Cloud & Alibaba 版本（需配合 Spring Boot 3.x） -->
+        <spring-cloud.version>2023.0.1</spring-cloud.version>
+        <spring-cloud-alibaba.version>2023.0.1.3</spring-cloud-alibaba.version>
     </properties>
 
     <dependencies>
@@ -41,18 +50,18 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.5</version> <!-- 更新到兼容 Java 23 的版本 -->
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.5</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.5</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -60,6 +69,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <version>1.18.30</version> <!-- 确保支持 Java 23 -->
             <scope>provided</scope>
         </dependency>
 
@@ -116,6 +126,7 @@
 
     <build>
         <plugins>
+            <!-- Spring Boot Maven Plugin -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -128,13 +139,20 @@
                     </excludes>
                 </configuration>
             </plugin>
+
+            <!-- ✅ 修复：升级 Maven 编译器插件以支持 Java 23 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.12.1</version> <!-- 升级到支持 Java 23 的版本 -->
                 <configuration>
-                    <source>11</source>
-                    <target>11</target>
+                    <source>23</source>
+                    <target>23</target>
+                    <release>23</release>
+                    <!-- 可选：启用 Java 23 预览功能 -->
+                    <compilerArgs>
+                        <arg>--enable-preview</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
         </plugins>
