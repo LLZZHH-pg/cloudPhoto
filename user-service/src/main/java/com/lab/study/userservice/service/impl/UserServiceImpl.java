@@ -63,8 +63,8 @@ public class UserServiceImpl implements UserService {
         claims.put("username", user.getNam());
         String token = JwtUtil.createJWT(key, "cloud-photo-key", jwtExpiration, claims);
         // 4. 存入 Redis
-        //String redisKey = "login:token:" + user.getUserId();
-        //redisTemplate.opsForValue().set(redisKey, token, 60, TimeUnit.MINUTES);
+        String redisKey = "login:token:" + user.getUserId();
+        redisTemplate.opsForValue().set(redisKey, token, 60, TimeUnit.MINUTES);
 
         // 5. 返回结果
         Map<String, Object> result = new HashMap<>();
