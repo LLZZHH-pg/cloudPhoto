@@ -59,10 +59,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     }
 
     @Override
-    public PictureDTO getDetail(Integer id) {
+    public PictureDTO getDetail(Long id) {
         Picture picture = this.getById(id);
         if (picture == null || picture.getDeleteTime() != null) {
-            throw new RuntimeException("图片不存在或已被移至回收站");
+            throw new IllegalArgumentException("图片不存在或已被移至回收站");
         }
         return convertToDTOWithHDPreview(picture);
     }
@@ -71,7 +71,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     @Transactional(rollbackFor = Exception.class)
     public void uploadPictures(MultipartFile[] files, Integer userId) {
         for (MultipartFile file : files) {
-            // 1. 获取文件 Hash 进行比对（示例使用虚拟方法）
             String hash = calculateHash(file);
             LambdaQueryWrapper<Picture> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(Picture::getFileHash, hash).eq(Picture::getUserid, userId);
@@ -100,7 +99,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     }
 
     @Override
-    public void deletePictures(List<Integer> ids) {
+    public void deletePictures(List<Long> ids) {
         LocalDateTime deleteLimit = LocalDateTime.now();
         LambdaUpdateWrapper<Picture> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.in(Picture::getPictureid, ids)
@@ -121,7 +120,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     }
 
     @Override
-    public void restorePictures(List<Integer> ids) {
+    public void restorePictures(List<Long> ids) {
         LambdaUpdateWrapper<Picture> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.in(Picture::getPictureid, ids)
                 .set(Picture::getDeleteTime, null);
@@ -130,7 +129,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void cleanTrash(List<Integer> ids) {
+    public void cleanTrash(List<Long> ids) {
         List<Picture> pictures = this.listByIds(ids);
         if (pictures.isEmpty()) return;
         for (Picture p : pictures) {

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @TableName(value = "picture_info", autoResultMap = true)
 public class Picture {
     @TableId(value = "pictureid", type = IdType.AUTO)
-    private Integer pictureid;
+    private Long pictureid;
 
     private Integer userid;
 
