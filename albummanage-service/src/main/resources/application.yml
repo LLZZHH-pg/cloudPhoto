@@ -8,7 +8,6 @@ spring:
             discovery:
                 server-addr: localhost:8848
             config:
-                server-addr: localhost:8848
+                server-addr: localhost:8848<<<<<<< HEAD
                 file-extension: yml
-
 
