@@ -20,6 +20,7 @@ public class PictureController {
 
     private Integer currentUserId() {
         try {
+//            return 1;
             return UserContextHolder.getCurrentUserId();
         } catch (Exception e) {
             return null;

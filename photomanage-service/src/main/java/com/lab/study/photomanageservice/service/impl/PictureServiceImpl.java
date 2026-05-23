@@ -10,6 +10,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lab.study.photomanageservice.entity.Picture;
 import com.lab.study.photomanageservice.mapper.PictureMapper;
 import com.lab.study.photomanageservice.service.PictureService;
+import com.qiniu.common.QiniuException;
+import com.qiniu.http.Response;
+import com.qiniu.storage.Configuration;
+import com.qiniu.storage.Region;
+import com.qiniu.storage.UploadManager;
+import com.qiniu.storage.BucketManager;
+import com.qiniu.util.Auth;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,9 +37,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.UUID;
+
+
 
 @Service
 public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> implements PictureService {
+
+    @Value("${qiniu.access-key}")
+    private String accessKey;
+    @Value("${qiniu.secret-key}")
+    private String secretKey;
+    @Value("${qiniu.bucket}")
+    private String bucket;
+    @Value("${qiniu.domain}")
+    private String domain;
 
     @Override
     public List<TimelineDTO> getTimeline(Integer userId, long current, long size) {
@@ -228,11 +248,61 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     }
 
     private String uploadToQiniu(MultipartFile file) {
-        // TODO: 调用 qiniu-java-sdk 将字节流上传至指定 Bucket
-        return "http://cdn.qiniu.com/mock/" + file.getOriginalFilename();
+        try {
+            // Region.autoRegion() 会自动匹配七牛云存储区域，也可以手动指定如 Region.region0() (华东)
+            Configuration cfg = new Configuration(Region.autoRegion());
+            UploadManager uploadManager = new UploadManager(cfg);
+
+            // 组装随机文件名，避免重名冲突
+            String originalFilename = file.getOriginalFilename();
+            String ext = "";
+            if (originalFilename != null && originalFilename.lastIndexOf(".") != -1) {
+                ext = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+            String key = UUID.randomUUID().toString().replace("-", "") + ext;
+
+            // 获取凭证
+            Auth auth = Auth.create(accessKey, secretKey);
+            String upToken = auth.uploadToken(bucket);
+
+            // 执行上传
+            Response response = uploadManager.put(file.getInputStream(), key, upToken, null, null);
+            if (response.isOK()) {
+                // 返回完整的访问 URL
+                return (domain.endsWith("/") ? domain : domain + "/") + key;
+            } else {
+                throw new RuntimeException("上传七牛云失败: " + response.bodyString());
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("上传图片异常", e);
+        }
     }
 
     private void deleteFromQiniu(String fileUrl) {
-        // TODO: 解析 URL 中的 Key，调用 Qiniu API 删除空间文件
+        if (fileUrl == null || !fileUrl.startsWith(domain)) {
+            return;
+        }
+        try {
+            // 从 URL 中提取 File Key
+            String prefix = domain.endsWith("/") ? domain : domain + "/";
+            String key = fileUrl.replaceFirst(prefix, "");
+
+            // 如果 URL 带了类似 ?imageView2 等参数，我们需要截断获取实际的 key
+            int queryIndex = key.indexOf("?");
+            if (queryIndex != -1) {
+                key = key.substring(0, queryIndex);
+            }
+
+            // 初始化删除管理器
+            Configuration cfg = new Configuration(Region.autoRegion());
+            Auth auth = Auth.create(accessKey, secretKey);
+            BucketManager bucketManager = new BucketManager(auth, cfg);
+
+            // 发起删除请求
+            bucketManager.delete(bucket, key);
+        } catch (QiniuException e) {
+            // 在批量删除时，建议打印日志而非让主流程中断直接跑出异常
+            System.err.println("删除七牛云文件失败: " + e.getMessage());
+        }
     }
 }

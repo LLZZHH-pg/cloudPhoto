@@ -10,8 +10,8 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @EnableDiscoveryClient
 @EnableFeignClients
 @MapperScan("com.lab.study.albummanageservice.mapper")
-public class AlbumManageServiceApplication {
+public class AlbummanageServiceApplication {
     public static void main(String[] args) {
-        SpringApplication.run(AlbumManageServiceApplication.class, args);
+        SpringApplication.run(AlbummanageServiceApplication.class, args);
     }
 }
