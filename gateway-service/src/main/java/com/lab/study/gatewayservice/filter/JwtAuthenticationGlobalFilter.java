@@ -43,8 +43,9 @@ public class JwtAuthenticationGlobalFilter implements GlobalFilter, Ordered {
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     private static final List<String> PUBLIC_PATHS = Arrays.asList(
-            "/api/user/auth/register",
-            "/api/user/auth/login"
+            "/user/register",
+            "/user/login",
+            "/album/public"
     );
 
     @Value("${jwt.secret}")

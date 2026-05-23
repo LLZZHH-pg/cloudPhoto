@@ -18,7 +18,7 @@ public interface AlbumService {
      * @param request 创建参数
      * @return 创建后的影集VO
      */
-    AlbumVO createAlbum(Long userId, AlbumRequest request);
+    AlbumVO createAlbum(Integer userId, AlbumRequest request);
 
     /**
      * 删除影集（逻辑删除）
@@ -26,7 +26,7 @@ public interface AlbumService {
      * @param userId  当前登录用户ID
      * @param albumId 影集ID
      */
-    void deleteAlbum(Long userId, Long albumId);
+    void deleteAlbum(Integer userId, Long albumId);
 
     /**
      * 更新影集信息
@@ -36,7 +36,7 @@ public interface AlbumService {
      * @param request 更新参数
      * @return 更新后的影集VO
      */
-    AlbumVO updateAlbum(Long userId, Long albumId, AlbumRequest request);
+    AlbumVO updateAlbum(Integer userId, Long albumId, AlbumRequest request);
 
     /**
      * 获取当前用户的影集列表
@@ -44,7 +44,7 @@ public interface AlbumService {
      * @param userId 当前登录用户ID
      * @return 影集列表
      */
-    List<AlbumVO> listAlbums(Long userId);
+    List<AlbumVO> listAlbums(Integer userId);
 
     /**
      * 获取影集详情（含照片ID列表）
@@ -53,7 +53,7 @@ public interface AlbumService {
      * @param albumId 影集ID
      * @return 影集详情VO
      */
-    AlbumVO getAlbumDetail(Long userId, Long albumId);
+    AlbumVO getAlbumDetail(Integer userId, Long albumId);
 
     /**
      * 向影集添加照片
@@ -62,7 +62,7 @@ public interface AlbumService {
      * @param albumId 影集ID
      * @param request 照片ID列表
      */
-    void addPhotos(Long userId, Long albumId, AlbumPhotoRequest request);
+    void addPhotos(Integer userId, Long albumId, AlbumPhotoRequest request);
 
     /**
      * 从影集移除照片
@@ -71,7 +71,7 @@ public interface AlbumService {
      * @param albumId 影集ID
      * @param request 照片ID列表
      */
-    void removePhotos(Long userId, Long albumId, AlbumPhotoRequest request);
+    void removePhotos(Integer userId, Long albumId, AlbumPhotoRequest request);
 
     /**
      * 获取公开影集列表（无需登录）

@@ -25,7 +25,7 @@ public class Album {
     private String coverUrl;
 
     /** 所属用户ID */
-    private Long userId;
+    private Integer userId;
 
     /** 是否公开：0-私有，1-公开 */
     private Integer isPublic;

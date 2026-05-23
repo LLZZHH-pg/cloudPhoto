@@ -33,7 +33,7 @@ public class AlbumServiceImpl implements AlbumService {
     // ─────────────────────────────────────────────────────────
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public AlbumVO createAlbum(Long userId, AlbumRequest request) {
+    public AlbumVO createAlbum(Integer userId, AlbumRequest request) {
         if (request.getName() == null || request.getName().isBlank()) {
             throw new RuntimeException("影集名称不能为空");
         }
@@ -55,7 +55,7 @@ public class AlbumServiceImpl implements AlbumService {
     // ─────────────────────────────────────────────────────────
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void deleteAlbum(Long userId, Long albumId) {
+    public void deleteAlbum(Integer userId, Long albumId) {
         Album album = getAlbumAndCheckOwner(userId, albumId);
 
         // 逻辑删除影集
@@ -73,7 +73,7 @@ public class AlbumServiceImpl implements AlbumService {
     // ─────────────────────────────────────────────────────────
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public AlbumVO updateAlbum(Long userId, Long albumId, AlbumRequest request) {
+    public AlbumVO updateAlbum(Integer userId, Long albumId, AlbumRequest request) {
         Album album = getAlbumAndCheckOwner(userId, albumId);
 
         if (request.getName() != null && !request.getName().isBlank()) {
@@ -97,7 +97,7 @@ public class AlbumServiceImpl implements AlbumService {
     // 查询当前用户的影集列表
     // ─────────────────────────────────────────────────────────
     @Override
-    public List<AlbumVO> listAlbums(Long userId) {
+    public List<AlbumVO> listAlbums(Integer userId) {
         List<Album> albums = albumMapper.selectList(
                 new LambdaQueryWrapper<Album>()
                         .eq(Album::getUserId, userId)
@@ -112,7 +112,7 @@ public class AlbumServiceImpl implements AlbumService {
     // 获取影集详情（含照片ID列表，公开影集任何人可看）
     // ─────────────────────────────────────────────────────────
     @Override
-    public AlbumVO getAlbumDetail(Long userId, Long albumId) {
+    public AlbumVO getAlbumDetail(Integer userId, Long albumId) {
         Album album = albumMapper.selectById(albumId);
         if (album == null) {
             throw new RuntimeException("影集不存在");
@@ -131,7 +131,7 @@ public class AlbumServiceImpl implements AlbumService {
     // ─────────────────────────────────────────────────────────
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void addPhotos(Long userId, Long albumId, AlbumPhotoRequest request) {
+    public void addPhotos(Integer userId, Long albumId, AlbumPhotoRequest request) {
         getAlbumAndCheckOwner(userId, albumId);
 
         if (request.getPhotoIds() == null || request.getPhotoIds().isEmpty()) {
@@ -165,7 +165,7 @@ public class AlbumServiceImpl implements AlbumService {
     // ─────────────────────────────────────────────────────────
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void removePhotos(Long userId, Long albumId, AlbumPhotoRequest request) {
+    public void removePhotos(Integer userId, Long albumId, AlbumPhotoRequest request) {
         getAlbumAndCheckOwner(userId, albumId);
 
         if (request.getPhotoIds() == null || request.getPhotoIds().isEmpty()) {
@@ -203,7 +203,7 @@ public class AlbumServiceImpl implements AlbumService {
     /**
      * 查询影集，并校验是否属于该用户（权限验证）
      */
-    private Album getAlbumAndCheckOwner(Long userId, Long albumId) {
+    private Album getAlbumAndCheckOwner(Integer userId, Long albumId) {
         Album album = albumMapper.selectById(albumId);
         if (album == null) {
             throw new RuntimeException("影集不存在");
