@@ -169,11 +169,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         this.removeByIds(ids);
     }
 
-
-
     private PictureDTO convertToDTOWithThumbnail(Picture picture) {
         PictureDTO dto = new PictureDTO();
-        BeanUtils.copyProperties(picture, dto);
+        dto.setPictureid(picture.getPictureid());
+        dto.setShotTime(picture.getShotTime());
+        dto.setDeleteTime(picture.getDeleteTime());
         dto.setPreviewUrl(picture.getFileUrl() + "?imageView2/1/w/200/h/200");
         return dto;
     }
@@ -295,7 +295,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         try {
             // 从 URL 中提取 File Key
             String prefix = domain.endsWith("/") ? domain : domain + "/";
-            String key = fileUrl.replaceFirst(prefix, "");
+            String key = fileUrl.substring(prefix.length());
 
             // 如果 URL 带了类似 ?imageView2 等参数，我们需要截断获取实际的 key
             int queryIndex = key.indexOf("?");

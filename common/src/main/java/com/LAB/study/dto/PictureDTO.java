@@ -8,7 +8,7 @@ public class PictureDTO {
     private Long pictureid;
     private String fileName;
     private LocalDateTime shotTime;
-    private String fileUrl;
+    private LocalDateTime deleteTime;
     private String previewUrl;
     private String fileExif;
 }
