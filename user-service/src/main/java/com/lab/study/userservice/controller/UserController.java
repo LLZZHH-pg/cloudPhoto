@@ -1,5 +1,7 @@
 package com.lab.study.userservice.controller;
 
+import com.LAB.study.dto.LoginDTO;
+import com.LAB.study.dto.RegisterDTO;
 import com.lab.study.userservice.entity.User;
 import com.lab.study.userservice.service.UserService;
 import com.lab.study.userservice.vo.ResultVo;
@@ -20,9 +22,9 @@ public class UserController {
      * POST /user/login
      */
     @PostMapping("/login")
-    public ResultVo login(@RequestBody User user) {
+    public ResultVo login(@RequestBody LoginDTO dto) {
         try {
-            Map<String, Object> data = userService.login(user.getNam(), user.getPas());
+            Map<String, Object> data = userService.login(dto.getAcc(), dto.getPas());
             return ResultVo.success(data);
         } catch (Exception e) {
             return ResultVo.fail(e.getMessage());
@@ -33,9 +35,9 @@ public class UserController {
      * 注册接口
      */
     @PostMapping("/register")
-    public ResultVo register(@RequestBody User user) {
+    public ResultVo register(@RequestBody RegisterDTO dto) {
         try {
-            userService.register(user);
+            userService.register(dto);
             return ResultVo.success("注册成功");
         } catch (Exception e) {
             return ResultVo.fail(e.getMessage());

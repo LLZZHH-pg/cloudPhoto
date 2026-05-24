@@ -1,6 +1,9 @@
 package com.lab.study.userservice.service.impl;
 
+import com.LAB.study.dto.RegisterDTO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.lab.study.userservice.entity.User;
 import com.lab.study.userservice.mapper.UserMapper;
 import com.lab.study.userservice.service.UserService;
@@ -13,16 +16,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
-/**
- * 用户服务实现类
- * 实现了 UserService 接口的具体逻辑
- */
-@Service // 注意：注解打在实现类上
+@Service
 public class UserServiceImpl implements UserService {
 
     @Value("${jwt.secret}")
@@ -39,34 +40,56 @@ public class UserServiceImpl implements UserService {
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+    // 预编译正则表达式
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^\\d{11}$");
+    private static final Pattern NUMBER_ONLY_PATTERN = Pattern.compile("^\\d+$");
+    private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-zA-Z0-9\\u4e00-\\u9fa5]+$"); // 无符号：只能中英数
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+
     @Override
-    public Map<String, Object> login(String username, String password) {
-        // 1. 查询用户
-        QueryWrapper<User> wrapper = new QueryWrapper<>();
-        wrapper.eq("nam", username);
-        User user = userMapper.selectOne(wrapper);
+    public Map<String, Object> login(String account, String password) {
+        if (account == null || account.trim().isEmpty()) {
+            throw new RuntimeException("登录账号不能为空");
+        }
+        if (password == null || password.isEmpty()) {
+            throw new RuntimeException("密码不能为空");
+        }
+
+        // 判断账号类型 (邮箱 / 手机号 / 用户名)
+        User user = userMapper.selectOne(Wrappers.<User>lambdaQuery()
+                .eq(account.contains("@"), User::getEml, account)
+                .eq(PHONE_PATTERN.matcher(account).matches(), User::getTel, account)
+                .eq(!account.contains("@") && !PHONE_PATTERN.matcher(account).matches(), User::getNam, account));
 
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new RuntimeException("该账号不存在，请检查输入或先注册");
         }
 
-        // 2. 校验密码 (使用 BCrypt)
+        // 校验密码 (使用 BCrypt)
         if (!passwordEncoder.matches(password, user.getPas())) {
-            throw new RuntimeException("密码错误");
+            throw new RuntimeException("密码错误，请重试");
         }
 
-        // 3. 生成 JWT
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        // 1. 生成唯一的 jti
+        String jti = java.util.UUID.randomUUID().toString();
 
+        // 2. 构造专业的 JwtUserDTO
+        com.LAB.study.dto.JwtUserDTO jwtUser = new com.LAB.study.dto.JwtUserDTO();
+        jwtUser.setUid(user.getUserId());
+
+        // 3. 构建 Claims
         Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", user.getUserId());
-        claims.put("username", user.getNam());
-        String token = JwtUtil.createJWT(key, "cloud-photo-key", jwtExpiration, claims);
-        // 4. 存入 Redis
-        String redisKey = "login:token:" + user.getUserId();
-        redisTemplate.opsForValue().set(redisKey, token, 60, TimeUnit.MINUTES);
+        claims.put("user", jwtUser);
+        claims.put("jti", jti);
 
-        // 5. 返回结果
+        // 4. 生成 JWT
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        String token = JwtUtil.createJWT(key, "cloud-photo-key", jwtExpiration, claims);
+
+        // 5. 存入 Redis 并返回
+        String redisKey = "auth:token:" + jti;
+        redisTemplate.opsForValue().set(redisKey, token, jwtExpiration, TimeUnit.MILLISECONDS);
+
         Map<String, Object> result = new HashMap<>();
         result.put("token", token);
         result.put("userInfo", user);
@@ -74,19 +97,67 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void register(User user) {
-        QueryWrapper<User> wrapper = new QueryWrapper<>();
-        wrapper.eq("nam", user.getNam());
-        if (userMapper.selectCount(wrapper) > 0) {
-            throw new RuntimeException("用户名已存在");
+    public void register(RegisterDTO dto) {
+        String nam = dto.getNam() == null ? "" : dto.getNam().trim();
+        String pas = dto.getPas() == null ? "" : dto.getPas().trim();
+        String tel = dto.getTel() == null ? "" : dto.getTel().trim();
+        String eml = dto.getEml() == null ? "" : dto.getEml().trim();
+
+        // 空值校验
+        if (tel.isEmpty()) {
+            throw new RuntimeException("号码不能为空");
         }
-        // 密码加密
-        user.setPas(passwordEncoder.encode(user.getPas()));
+        if (pas.isEmpty()) {
+            throw new RuntimeException("密码不能为空");
+        }
+        // 密码校验
+        if (pas.length() < 6) {
+            throw new RuntimeException("密码长度不能少于6位");
+        }
+        // 电话格式校验
+        if (!PHONE_PATTERN.matcher(tel).matches()) {
+            throw new RuntimeException("电话号码必须是11位纯数字");
+        }
+        // 用户名校验
+        if (!nam.isEmpty()) {
+            if (nam.length() < 2) {
+                throw new RuntimeException("用户名不能少于2个字符");
+            }
+            if (NUMBER_ONLY_PATTERN.matcher(nam).matches()) {
+                throw new RuntimeException("用户名不能是纯数字");
+            }
+            if (!USERNAME_PATTERN.matcher(nam).matches()) {
+                throw new RuntimeException("用户名只能包含中英文和数字，不能使用符号");
+            }
+        }
+        // 邮箱格式校验
+        if (!eml.isEmpty()) {
+            if (!EMAIL_PATTERN.matcher(eml).matches()) {
+                throw new RuntimeException("邮箱格式不正确");
+            }
+        }
+
+        // 2. 唯一性校验
+        checkUnique(User::getNam, nam, "用户名已存在");
+        checkUnique(User::getTel, tel, "手机号已存在");
+        checkUnique(User::getEml, eml, "邮箱已存在");
+
+        // 3. 赋值与插入
+        User user = new User();
+        user.setNam(nam);
+        user.setPas(passwordEncoder.encode(pas));
+        user.setTel(tel);
+        user.setEml(eml);
         // 默认配额 1GB
         user.setTotalstorage(1024L * 1024 * 1024);
         user.setUsedstorage(0L);
 
         userMapper.insert(user);
+    }
+    private void checkUnique(SFunction<User, ?> column, String value, String msg) {
+        if (StringUtils.hasText(value) && userMapper.selectCount(Wrappers.<User>lambdaQuery().eq(column, value)) > 0) {
+            throw new RuntimeException(msg);
+        }
     }
 
     @Override

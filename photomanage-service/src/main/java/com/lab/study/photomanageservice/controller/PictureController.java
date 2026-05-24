@@ -19,29 +19,22 @@ public class PictureController {
     private PictureService pictureService;
 
     private Integer currentUserId() {
-        try {
-//            return 1;
-            return UserContextHolder.getCurrentUserId();
-        } catch (Exception e) {
-            return null;
-        }
+//        return 1;
+        return UserContextHolder.getCurrentUserId();
+
     }
     
     @GetMapping("/timeline")
     public ResultVo<List<TimelineDTO>> getTimeline(
             @RequestParam(defaultValue = "1") long current,
             @RequestParam(defaultValue = "20") long size) {
-        Integer userId = currentUserId();
-        if (userId == null) {
-            return ResultVo.fail(401, "未登录");
-        }
-        List<TimelineDTO> result = pictureService.getTimeline(userId, current, size);
+        List<TimelineDTO> result = pictureService.getTimeline(currentUserId(), current, size);
         return ResultVo.success(result);
     }
     
     @GetMapping("/detail/{id}")
     public ResultVo<PictureDTO> getDetail(@PathVariable Long id) {
-        PictureDTO detail = pictureService.getDetail(id);
+        PictureDTO detail = pictureService.getDetail(id, currentUserId());
         return ResultVo.success(detail);
     }
     
@@ -50,51 +43,31 @@ public class PictureController {
         if (files == null || files.length == 0) {
             return ResultVo.fail(400, "上传文件不能为空");
         }
-        Integer userId = currentUserId();
-        if (userId == null) {
-            return ResultVo.fail(401, "未登录");
-        }
-        pictureService.uploadPictures(files, userId);
+        pictureService.uploadPictures(files, currentUserId());
         return ResultVo.success();
     }
     
     @PostMapping("/delete")
     public ResultVo<Void> deletePictures(@RequestBody List<Long> ids) {
-        Integer userId = currentUserId();
-        if (userId == null) {
-            return ResultVo.fail(401, "未登录");
-        }
-        pictureService.deletePictures(ids);
+        pictureService.deletePictures(ids, currentUserId());
         return ResultVo.success();
     }
     
     @GetMapping("/trash/list")
     public ResultVo<List<PictureDTO>> getTrashList() {
-        Integer userId = currentUserId();
-        if (userId == null) {
-            return ResultVo.fail(401, "未登录");
-        }
-        List<PictureDTO> list = pictureService.getTrashList(userId);
+        List<PictureDTO> list = pictureService.getTrashList(currentUserId());
         return ResultVo.success(list);
     }
     
     @PostMapping("/trash/restore")
     public ResultVo<Void> restorePictures(@RequestBody List<Long> ids) {
-        Integer userId = currentUserId();
-        if (userId == null) {
-            return ResultVo.fail(401, "未登录");
-        }
-        pictureService.restorePictures(ids);
+        pictureService.restorePictures(ids, currentUserId());
         return ResultVo.success();
     }
     
     @DeleteMapping("/trash/clean")
     public ResultVo<Void> cleanTrash(@RequestBody List<Long> ids) {
-        Integer userId = currentUserId();
-        if (userId == null) {
-            return ResultVo.fail(401, "未登录");
-        }
-        pictureService.cleanTrash(ids);
+        pictureService.cleanTrash(ids, currentUserId());
         return ResultVo.success();
     }
 

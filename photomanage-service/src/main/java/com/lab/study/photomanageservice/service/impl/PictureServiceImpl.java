@@ -79,8 +79,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     }
 
     @Override
-    public PictureDTO getDetail(Long id) {
-        Picture picture = this.getById(id);
+    public PictureDTO getDetail(Long id, Integer userId) {
+        LambdaQueryWrapper<Picture> query = new LambdaQueryWrapper<>();
+        query.eq(Picture::getPictureid, id)
+                .eq(Picture::getUserid, userId);
+        Picture picture = this.getOne(query);
         if (picture == null || picture.getDeleteTime() != null) {
             throw new IllegalArgumentException("图片不存在或已被移至回收站");
         }
@@ -119,10 +122,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     }
 
     @Override
-    public void deletePictures(List<Long> ids) {
+    public void deletePictures(List<Long> ids, Integer userId) {
+        if (ids == null || ids.isEmpty()) return;
+
         LocalDateTime deleteLimit = LocalDateTime.now();
         LambdaUpdateWrapper<Picture> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.in(Picture::getPictureid, ids)
+                .eq(Picture::getUserid, userId)
                 .set(Picture::getDeleteTime, deleteLimit);
         this.update(updateWrapper);
     }
@@ -140,16 +146,21 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     }
 
     @Override
-    public void restorePictures(List<Long> ids) {
+    public void restorePictures(List<Long> ids, Integer userId) {
+        if (ids == null || ids.isEmpty()) return;
+
         LambdaUpdateWrapper<Picture> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.in(Picture::getPictureid, ids)
+                .eq(Picture::getUserid, userId)
                 .set(Picture::getDeleteTime, null);
         this.update(updateWrapper);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void cleanTrash(List<Long> ids) {
+    public void cleanTrash(List<Long> ids, Integer userId) {
+        if (ids == null || ids.isEmpty()) return;
+
         List<Picture> pictures = this.listByIds(ids);
         if (pictures.isEmpty()) return;
         for (Picture p : pictures) {
@@ -249,7 +260,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
     private String uploadToQiniu(MultipartFile file) {
         try {
-            // Region.autoRegion() 会自动匹配七牛云存储区域，也可以手动指定如 Region.region0() (华东)
             Configuration cfg = new Configuration(Region.autoRegion());
             UploadManager uploadManager = new UploadManager(cfg);
 
@@ -301,7 +311,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             // 发起删除请求
             bucketManager.delete(bucket, key);
         } catch (QiniuException e) {
-            // 在批量删除时，建议打印日志而非让主流程中断直接跑出异常
             System.err.println("删除七牛云文件失败: " + e.getMessage());
         }
     }

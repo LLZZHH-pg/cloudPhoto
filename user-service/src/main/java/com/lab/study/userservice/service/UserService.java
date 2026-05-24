@@ -1,5 +1,6 @@
 package com.lab.study.userservice.service;
 
+import com.LAB.study.dto.RegisterDTO;
 import com.lab.study.userservice.entity.User;
 import java.util.Map;
 
@@ -11,17 +12,17 @@ public interface UserService {
 
     /**
      * 用户登录
-     * @param username 用户名
+     * @param account 用户名
      * @param password 密码
      * @return 包含 Token 和用户信息的 Map
      */
-    Map<String, Object> login(String username, String password);
+    Map<String, Object> login(String account, String password);
 
     /**
      * 用户注册
-     * @param user 用户实体
+     * @param dto 用户实体
      */
-    void register(User user);
+    void register(RegisterDTO dto);
 
     /**
      * 根据 ID 获取用户信息

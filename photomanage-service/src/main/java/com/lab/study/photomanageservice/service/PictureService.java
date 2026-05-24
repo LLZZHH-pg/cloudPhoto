@@ -12,15 +12,15 @@ public interface PictureService extends IService<Picture> {
 
     List<TimelineDTO> getTimeline(Integer userId, long current, long size);
 
-    PictureDTO getDetail(Long id);
+    PictureDTO getDetail(Long id, Integer userId);
 
     void uploadPictures(MultipartFile[] files, Integer userId);
 
-    void deletePictures(List<Long> ids);
+    void deletePictures(List<Long> ids, Integer userId);
 
     List<PictureDTO> getTrashList(Integer userId);
 
-    void restorePictures(List<Long> ids);
+    void restorePictures(List<Long> ids, Integer userId);
 
-    void cleanTrash(List<Long> ids);
+    void cleanTrash(List<Long> ids, Integer userId);
 }
