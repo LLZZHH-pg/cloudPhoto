@@ -1,8 +1,8 @@
 package com.lab.study.albummanageservice.service;
 
-import com.lab.study.albummanageservice.dto.AlbumPhotoRequest;
-import com.lab.study.albummanageservice.dto.AlbumRequest;
-import com.lab.study.albummanageservice.vo.AlbumVO;
+import com.LAB.study.dto.AlbumPhotoRequest;
+import com.LAB.study.dto.AlbumRequest;
+import com.LAB.study.vo.AlbumVO;
 
 import java.util.List;
 

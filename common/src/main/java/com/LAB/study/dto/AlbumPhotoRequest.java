@@ -1,4 +1,4 @@
-package com.lab.study.albummanageservice.dto;
+package com.LAB.study.dto;
 
 import lombok.Data;
 

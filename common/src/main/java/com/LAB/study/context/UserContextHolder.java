@@ -33,7 +33,6 @@ public class UserContextHolder {
         }
 
         try {
-            // 如果网关以后做了 URLEncoder 编码，这里可以解一下码；如果网关没做，这一步解普通JSON也不受影响
             String decodedUserJson = URLDecoder.decode(userJson, StandardCharsets.UTF_8.name());
             JwtUserDTO jwtUser = OBJECT_MAPPER.readValue(decodedUserJson, JwtUserDTO.class);
             if (jwtUser.getUid() == null) {

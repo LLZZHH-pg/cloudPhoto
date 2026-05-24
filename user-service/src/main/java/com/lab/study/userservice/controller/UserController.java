@@ -2,9 +2,9 @@ package com.lab.study.userservice.controller;
 
 import com.LAB.study.dto.LoginDTO;
 import com.LAB.study.dto.RegisterDTO;
+import com.LAB.study.result.Result;
 import com.lab.study.userservice.entity.User;
 import com.lab.study.userservice.service.UserService;
-import com.lab.study.userservice.vo.ResultVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,18 +16,14 @@ public class UserController {
 
     @Autowired
     private UserService userService;
-
-    /**
-     * 登录接口
-     * POST /user/login
-     */
+    
     @PostMapping("/login")
-    public ResultVo login(@RequestBody LoginDTO dto) {
+    public Result login(@RequestBody LoginDTO dto) {
         try {
             Map<String, Object> data = userService.login(dto.getAcc(), dto.getPas());
-            return ResultVo.success(data);
+            return Result.success(data);
         } catch (Exception e) {
-            return ResultVo.fail(e.getMessage());
+            return Result.error(e.getMessage());
         }
     }
 
@@ -35,12 +31,12 @@ public class UserController {
      * 注册接口
      */
     @PostMapping("/register")
-    public ResultVo register(@RequestBody RegisterDTO dto) {
+    public Result register(@RequestBody RegisterDTO dto) {
         try {
             userService.register(dto);
-            return ResultVo.success("注册成功");
+            return Result.success("注册成功");
         } catch (Exception e) {
-            return ResultVo.fail(e.getMessage());
+            return Result.error(e.getMessage());
         }
     }
 
@@ -49,12 +45,12 @@ public class UserController {
      * 供网关验证Token后查询用户详情
      */
     @GetMapping("/info/{id}")
-    public ResultVo<User> getUserInfo(@PathVariable Integer id) {
+    public Result<User> getUserInfo(@PathVariable Integer id) {
         User user = userService.getUserById(id);
         if (user != null) {
-            return ResultVo.success(user);
+            return Result.success(user);
         } else {
-            return ResultVo.fail("用户不存在");
+            return Result.error("用户不存在");
         }
     }
 }

@@ -1,29 +1,25 @@
-package com.lab.study.albummanageservice.common;
+package com.LAB.study.result;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-/**
- * 统一响应结果封装
- */
+/** * 统一响应结果封装 */
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Result<T> {
 
     private Integer code;
     private String message;
     private T data;
 
-    private Result(Integer code, String message, T data) {
-        this.code = code;
-        this.message = message;
-        this.data = data;
-    }
-
     public static <T> Result<T> success(T data) {
-        return new Result<>(200, "success", data);
+        return new Result<>(200, "操作成功", data);
     }
 
     public static <T> Result<T> success() {
-        return new Result<>(200, "success", null);
+        return new Result<>(200, "操作成功", null);
     }
 
     public static <T> Result<T> error(String message) {

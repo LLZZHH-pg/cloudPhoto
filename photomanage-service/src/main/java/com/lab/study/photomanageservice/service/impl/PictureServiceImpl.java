@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.LAB.study.dto.PictureDTO;
-import com.LAB.study.dto.TimelineDTO;
+import com.LAB.study.vo.PictureVO;
+import com.LAB.study.vo.TimelineVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lab.study.photomanageservice.entity.Picture;
 import com.lab.study.photomanageservice.mapper.PictureMapper;
@@ -54,7 +54,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     private String domain;
 
     @Override
-    public List<TimelineDTO> getTimeline(Integer userId, long current, long size) {
+    public List<TimelineVO> getTimeline(Integer userId, long current, long size) {
         Page<Picture> page = new Page<>(current, size);
         LambdaQueryWrapper<Picture> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Picture::getUserid, userId)
@@ -64,12 +64,12 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         List<Picture> records = this.page(page, queryWrapper).getRecords();
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        Map<String, List<PictureDTO>> groupedMap = records.stream().map(this::convertToDTOWithThumbnail)
+        Map<String, List<PictureVO>> groupedMap = records.stream().map(this::convertToVOWithThumbnail)
                 .collect(Collectors.groupingBy(dto -> dto.getShotTime().format(formatter)));
 
         return groupedMap.entrySet().stream()
                 .map(entry -> {
-                    TimelineDTO timelineDTO = new TimelineDTO();
+                    TimelineVO timelineDTO = new TimelineVO();
                     timelineDTO.setDate(entry.getKey());
                     timelineDTO.setPictures(entry.getValue());
                     return timelineDTO;
@@ -79,7 +79,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     }
 
     @Override
-    public PictureDTO getDetail(Long id, Integer userId) {
+    public PictureVO getDetail(Long id, Integer userId) {
         LambdaQueryWrapper<Picture> query = new LambdaQueryWrapper<>();
         query.eq(Picture::getPictureid, id)
                 .eq(Picture::getUserid, userId);
@@ -87,7 +87,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         if (picture == null || picture.getDeleteTime() != null) {
             throw new IllegalArgumentException("图片不存在或已被移至回收站");
         }
-        return convertToDTOWithHDPreview(picture);
+        return convertToVOWithHDPreview(picture);
     }
 
     @Override
@@ -134,14 +134,14 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     }
 
     @Override
-    public List<PictureDTO> getTrashList(Integer userId) {
+    public List<PictureVO> getTrashList(Integer userId) {
         LambdaQueryWrapper<Picture> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Picture::getUserid, userId)
                 .isNotNull(Picture::getDeleteTime)
                 .orderByAsc(Picture::getDeleteTime);
 
         return this.list(queryWrapper).stream()
-                .map(this::convertToDTOWithThumbnail)
+                .map(this::convertToVOWithThumbnail)
                 .collect(Collectors.toList());
     }
 
@@ -169,20 +169,20 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         this.removeByIds(ids);
     }
 
-    private PictureDTO convertToDTOWithThumbnail(Picture picture) {
-        PictureDTO dto = new PictureDTO();
-        dto.setPictureid(picture.getPictureid());
-        dto.setShotTime(picture.getShotTime());
-        dto.setDeleteTime(picture.getDeleteTime());
-        dto.setPreviewUrl(picture.getFileUrl() + "?imageView2/1/w/200/h/200");
-        return dto;
+    private PictureVO convertToVOWithThumbnail(Picture picture) {
+        PictureVO vo = new PictureVO();
+        vo.setPictureid(picture.getPictureid());
+        vo.setShotTime(picture.getShotTime());
+        vo.setDeleteTime(picture.getDeleteTime());
+        vo.setPreviewUrl(picture.getFileUrl() + "?imageView2/1/w/200/h/200");
+        return vo;
     }
 
-    private PictureDTO convertToDTOWithHDPreview(Picture picture) {
-        PictureDTO dto = new PictureDTO();
-        BeanUtils.copyProperties(picture, dto);
-        dto.setPreviewUrl(picture.getFileUrl() + "?imageView2/2/w/1920/q/90");
-        return dto;
+    private PictureVO convertToVOWithHDPreview(Picture picture) {
+        PictureVO vo = new PictureVO();
+        BeanUtils.copyProperties(picture, vo);
+        vo.setPreviewUrl(picture.getFileUrl() + "?imageView2/2/w/1920/q/90");
+        return vo;
     }
 
     private String calculateHash(MultipartFile file) {

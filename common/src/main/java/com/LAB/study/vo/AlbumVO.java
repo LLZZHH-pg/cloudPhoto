@@ -1,4 +1,4 @@
-package com.lab.study.albummanageservice.vo;
+package com.LAB.study.vo;
 
 import lombok.Data;
 

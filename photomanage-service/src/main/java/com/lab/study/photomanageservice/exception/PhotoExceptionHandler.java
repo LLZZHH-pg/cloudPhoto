@@ -1,6 +1,6 @@
 package com.lab.study.photomanageservice.exception;
 
-import com.lab.study.photomanageservice.vo.ResultVo;
+import com.LAB.study.result.Result;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
@@ -16,8 +16,8 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 public class PhotoExceptionHandler  {
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResultVo<Void> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e, HttpServletRequest request) {
-        return ResultVo.fail(413, "上传文件过大，超过系统限制");
+    public Result<Void> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e, HttpServletRequest request) {
+        return Result.error(413, "上传文件过大，超过系统限制");
     }
 
     @ExceptionHandler({
@@ -27,34 +27,34 @@ public class PhotoExceptionHandler  {
             MethodArgumentTypeMismatchException.class,
             HttpMessageNotReadableException.class
     })
-    public ResultVo<Void> handleBadRequest(Exception e, HttpServletRequest request) {
-        return ResultVo.fail(400, "请求参数错误");
+    public Result<Void> handleBadRequest(Exception e, HttpServletRequest request) {
+        return Result.error(400, "请求参数错误");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResultVo<Void> handleIllegalArgumentException(IllegalArgumentException e, HttpServletRequest request) {
+    public Result<Void> handleIllegalArgumentException(IllegalArgumentException e, HttpServletRequest request) {
         String msg = e.getMessage();
-        return ResultVo.fail(400, (msg == null || msg.isBlank()) ? "请求参数错误" : msg);
+        return Result.error(400, (msg == null || msg.isBlank()) ? "请求参数错误" : msg);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResultVo<Void> handleMethodNotSupported(HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
-        return ResultVo.fail(405, "请求方法不支持");
+    public Result<Void> handleMethodNotSupported(HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
+        return Result.error(405, "请求方法不支持");
     }
 
     @ExceptionHandler(SecurityException.class)
-    public ResultVo<Void> handleSecurityException(SecurityException e, HttpServletRequest request) {
-        return ResultVo.fail(401, e.getMessage() == null ? "用户未认证" : e.getMessage());
+    public Result<Void> handleSecurityException(SecurityException e, HttpServletRequest request) {
+        return Result.error(401, e.getMessage() == null ? "用户未认证" : e.getMessage());
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public ResultVo<Void> handleRuntimeException(RuntimeException e, HttpServletRequest request) {
+    public Result<Void> handleRuntimeException(RuntimeException e, HttpServletRequest request) {
         String msg = e.getMessage();
-        return ResultVo.fail(500, (msg == null || msg.isBlank()) ? "系统繁忙，请稍后重试" : msg);
+        return Result.error(500, (msg == null || msg.isBlank()) ? "系统繁忙，请稍后重试" : msg);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResultVo<Void> handleException(Exception e, HttpServletRequest request) {
-        return ResultVo.fail(500, "服务器内部错误");
+    public Result<Void> handleException(Exception e, HttpServletRequest request) {
+        return Result.error(500, "服务器内部错误");
     }
 }

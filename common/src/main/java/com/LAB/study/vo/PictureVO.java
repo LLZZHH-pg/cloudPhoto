@@ -1,10 +1,10 @@
-package com.LAB.study.dto;
+package com.LAB.study.vo;
 
 import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class PictureDTO {
+public class PictureVO {
     private Long pictureid;
     private String fileName;
     private LocalDateTime shotTime;

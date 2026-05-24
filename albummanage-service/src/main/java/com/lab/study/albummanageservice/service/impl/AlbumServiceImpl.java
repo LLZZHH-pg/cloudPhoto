@@ -2,14 +2,14 @@ package com.lab.study.albummanageservice.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.lab.study.albummanageservice.dto.AlbumPhotoRequest;
-import com.lab.study.albummanageservice.dto.AlbumRequest;
+import com.LAB.study.dto.AlbumPhotoRequest;
+import com.LAB.study.dto.AlbumRequest;
 import com.lab.study.albummanageservice.entity.Album;
 import com.lab.study.albummanageservice.entity.AlbumPhoto;
 import com.lab.study.albummanageservice.mapper.AlbumMapper;
 import com.lab.study.albummanageservice.mapper.AlbumPhotoMapper;
 import com.lab.study.albummanageservice.service.AlbumService;
-import com.lab.study.albummanageservice.vo.AlbumVO;
+import com.LAB.study.vo.AlbumVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

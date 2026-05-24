@@ -1,11 +1,11 @@
 package com.lab.study.albummanageservice.controller;
 
 import com.LAB.study.context.UserContextHolder;
-import com.lab.study.albummanageservice.common.Result;
-import com.lab.study.albummanageservice.dto.AlbumPhotoRequest;
-import com.lab.study.albummanageservice.dto.AlbumRequest;
+import com.LAB.study.result.Result;
+import com.LAB.study.dto.AlbumPhotoRequest;
+import com.LAB.study.dto.AlbumRequest;
 import com.lab.study.albummanageservice.service.AlbumService;
-import com.lab.study.albummanageservice.vo.AlbumVO;
+import com.LAB.study.vo.AlbumVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,11 +31,7 @@ public class AlbumController {
 
     private final AlbumService albumService;
     private Integer currentUserId() {
-        try {
-            return UserContextHolder.getCurrentUserId();
-        } catch (Exception e) {
-            return null;
-        }
+        return UserContextHolder.getCurrentUserId();
     }
 
     // ─────────────────────────────────────────────────────────
@@ -44,9 +40,7 @@ public class AlbumController {
     @PostMapping("/create")
     public Result<AlbumVO> createAlbum(
             @RequestBody AlbumRequest request) {
-        Integer userId = currentUserId();
-        if (userId == null) return Result.unauthorized();
-        AlbumVO vo = albumService.createAlbum(userId, request);
+        AlbumVO vo = albumService.createAlbum(currentUserId(), request);
         return Result.success(vo);
     }
 
@@ -56,9 +50,7 @@ public class AlbumController {
     @DeleteMapping("/{id}")
     public Result<Void> deleteAlbum(
             @PathVariable Long id) {
-        Integer userId = currentUserId();
-        if (userId == null) return Result.unauthorized();
-        albumService.deleteAlbum(userId, id);
+        albumService.deleteAlbum(currentUserId(), id);
         return Result.success();
     }
 
@@ -69,9 +61,7 @@ public class AlbumController {
     public Result<AlbumVO> updateAlbum(
             @PathVariable Long id,
             @RequestBody AlbumRequest request) {
-        Integer userId = currentUserId();
-        if (userId == null) return Result.unauthorized();
-        AlbumVO vo = albumService.updateAlbum(userId, id, request);
+        AlbumVO vo = albumService.updateAlbum(currentUserId(), id, request);
         return Result.success(vo);
     }
 
@@ -80,9 +70,7 @@ public class AlbumController {
     // ─────────────────────────────────────────────────────────
     @GetMapping("/list")
     public Result<List<AlbumVO>> listAlbums() {
-        Integer userId = currentUserId();
-        if (userId == null) return Result.unauthorized();
-        List<AlbumVO> list = albumService.listAlbums(userId);
+        List<AlbumVO> list = albumService.listAlbums(currentUserId());
         return Result.success(list);
     }
 
@@ -92,8 +80,7 @@ public class AlbumController {
     @GetMapping("/{id}")
     public Result<AlbumVO> getAlbumDetail(
             @PathVariable Long id) {
-        Integer userId = currentUserId();
-        AlbumVO vo = albumService.getAlbumDetail(userId, id);
+        AlbumVO vo = albumService.getAlbumDetail(currentUserId(), id);
         return Result.success(vo);
     }
 
@@ -104,9 +91,7 @@ public class AlbumController {
     public Result<Void> addPhotos(
             @PathVariable Long id,
             @RequestBody AlbumPhotoRequest request) {
-        Integer userId = currentUserId();
-        if (userId == null) return Result.unauthorized();
-        albumService.addPhotos(userId, id, request);
+        albumService.addPhotos(currentUserId(), id, request);
         return Result.success();
     }
 
@@ -117,9 +102,7 @@ public class AlbumController {
     public Result<Void> removePhotos(
             @PathVariable Long id,
             @RequestBody AlbumPhotoRequest request) {
-        Integer userId = currentUserId();
-        if (userId == null) return Result.unauthorized();
-        albumService.removePhotos(userId, id, request);
+        albumService.removePhotos(currentUserId(), id, request);
         return Result.success();
     }
 
