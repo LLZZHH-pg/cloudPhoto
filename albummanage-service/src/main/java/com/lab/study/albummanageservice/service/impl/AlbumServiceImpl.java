@@ -1,11 +1,14 @@
 package com.lab.study.albummanageservice.service.impl;
 
+import com.LAB.study.dto.PictureDTO;
+import com.LAB.study.result.Result;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.LAB.study.dto.AlbumPhotoRequest;
 import com.LAB.study.dto.AlbumRequest;
 import com.lab.study.albummanageservice.entity.Album;
 import com.lab.study.albummanageservice.entity.AlbumPhoto;
+import com.lab.study.albummanageservice.feign.PhotoFeign;
 import com.lab.study.albummanageservice.mapper.AlbumMapper;
 import com.lab.study.albummanageservice.mapper.AlbumPhotoMapper;
 import com.lab.study.albummanageservice.service.AlbumService;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -27,6 +31,7 @@ public class AlbumServiceImpl implements AlbumService {
 
     private final AlbumMapper albumMapper;
     private final AlbumPhotoMapper albumPhotoMapper;
+    private final PhotoFeign photoFeign;
 
     // ─────────────────────────────────────────────────────────
     // 创建影集
@@ -56,16 +61,8 @@ public class AlbumServiceImpl implements AlbumService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteAlbum(Integer userId, Long albumId) {
-        Album album = getAlbumAndCheckOwner(userId, albumId);
-
-        // 逻辑删除影集
+        getAlbumAndCheckOwner(userId, albumId);
         albumMapper.deleteById(albumId);
-
-        // 物理删除关联照片记录（关联表无需逻辑删除）
-        albumPhotoMapper.delete(
-                new LambdaQueryWrapper<AlbumPhoto>()
-                        .eq(AlbumPhoto::getAlbumId, albumId)
-        );
     }
 
     // ─────────────────────────────────────────────────────────
@@ -103,9 +100,47 @@ public class AlbumServiceImpl implements AlbumService {
                         .eq(Album::getUserId, userId)
                         .orderByDesc(Album::getCreatedAt)
         );
-        return albums.stream()
-                .map(a -> toVO(a, null))
-                .collect(Collectors.toList());
+        if (albums.isEmpty()) return List.of();
+
+        List<AlbumVO> voList = albums.stream().map(a -> toVO(a, null)).collect(Collectors.toList());
+        List<Long> albumIds = albums.stream().map(Album::getId).collect(Collectors.toList());
+
+        // 1. 批量查询关联表获取第一张图片 ID
+        List<AlbumPhoto> allRelations = albumPhotoMapper.selectList(
+                new LambdaQueryWrapper<AlbumPhoto>().in(AlbumPhoto::getAlbumId, albumIds)
+        );
+
+        // 提取每个影集对应的第一张图片的ID映射 (AlbumId -> PhotoId)
+        Map<Long, Long> firstPhotoMap = allRelations.stream()
+                .collect(Collectors.groupingBy(
+                        AlbumPhoto::getAlbumId,
+                        Collectors.collectingAndThen(Collectors.toList(), list -> list.get(0).getPhotoId()) // 就取第一张
+                ));
+
+        // 去重需要进行 Feign 远程调用的 PhotoId 进行批量拉取
+        List<Long> requestPhotoIds = firstPhotoMap.values().stream().distinct().collect(Collectors.toList());
+
+        if (!requestPhotoIds.isEmpty()) {
+            try {
+                Result<List<PictureDTO>> feignResult = photoFeign.getPicturesByIds(requestPhotoIds);
+                if (feignResult.getCode() == 200 && feignResult.getData() != null) {
+                    // 转为 PhotoId -> PictureDTO 的 Map 方便 O(1) 提取
+                    Map<Long, PictureDTO> photoMap = feignResult.getData().stream()
+                            .collect(Collectors.toMap(PictureDTO::getPictureid, p -> p));
+
+                    // 回填数据给 VO，将找到的第一张图片存入 photos 集合返回（或者你想回填在其他新建的单个cover属性上都可以）
+                    for (AlbumVO vo : voList) {
+                        Long firstId = firstPhotoMap.get(vo.getId());
+                        if (firstId != null && photoMap.containsKey(firstId)) {
+                            vo.setPhotos(List.of(photoMap.get(firstId)));
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return voList;
     }
 
     // ─────────────────────────────────────────────────────────
@@ -113,17 +148,22 @@ public class AlbumServiceImpl implements AlbumService {
     // ─────────────────────────────────────────────────────────
     @Override
     public AlbumVO getAlbumDetail(Integer userId, Long albumId) {
-        Album album = albumMapper.selectById(albumId);
-        if (album == null) {
-            throw new RuntimeException("影集不存在");
-        }
-        // 私有影集只有主人可以查看
-        if (album.getIsPublic() == 0 && !album.getUserId().equals(userId)) {
-            throw new RuntimeException("无权限查看该影集");
-        }
+        Album album = getAlbumAndCheckOwner(userId, albumId);
 
         List<Long> photoIds = albumPhotoMapper.selectPhotoIdsByAlbumId(albumId);
-        return toVO(album, photoIds);
+        AlbumVO vo = toVO(album, photoIds);
+
+        if (photoIds != null && !photoIds.isEmpty()) {
+            try {
+                Result<List<PictureDTO>> picResult = photoFeign.getPicturesByIds(photoIds);
+                if (picResult.getCode() == 200 && picResult.getData() != null) {
+                    vo.setPhotos(picResult.getData());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return vo;
     }
 
     // ─────────────────────────────────────────────────────────

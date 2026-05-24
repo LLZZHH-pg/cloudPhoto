@@ -1,5 +1,6 @@
 package com.LAB.study.vo;
 
+import com.LAB.study.dto.PictureDTO;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -15,7 +16,7 @@ public class AlbumVO {
     private String name;
     private String description;
     private String coverUrl;
-    private Long userId;
+    private Integer userId;
     private Integer isPublic;
     private Integer photoCount;
     private LocalDateTime createdAt;
@@ -23,4 +24,6 @@ public class AlbumVO {
 
     /** 影集内的照片ID列表（详情接口返回） */
     private List<Long> photoIds;
+    /** 关联的图片详细数据 */
+    private List<PictureDTO> photos;
 }

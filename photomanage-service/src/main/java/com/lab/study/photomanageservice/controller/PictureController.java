@@ -1,6 +1,7 @@
 package com.lab.study.photomanageservice.controller;
 
 import com.LAB.study.context.UserContextHolder;
+import com.LAB.study.dto.PictureDTO;
 import com.LAB.study.vo.PictureVO;
 import com.LAB.study.vo.TimelineVO;
 import com.LAB.study.result.Result;
@@ -67,6 +68,13 @@ public class PictureController {
     public Result<Void> cleanTrash(@RequestBody List<Long> ids) {
         pictureService.cleanTrash(ids, currentUserId());
         return Result.success();
+    }
+
+
+    @PostMapping("/internal/getphoto")
+    public Result<List<PictureDTO>> getPicturesByIds(@RequestBody List<Long> ids) {
+        List<PictureDTO> list = pictureService.getPicturesByIds(ids);
+        return Result.success(list);
     }
 
 

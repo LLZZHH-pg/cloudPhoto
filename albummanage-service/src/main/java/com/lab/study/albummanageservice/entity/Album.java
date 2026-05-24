@@ -33,10 +33,6 @@ public class Album {
     /** 照片数量（冗余字段，提高查询效率） */
     private Integer photoCount;
 
-    /** 逻辑删除标志：0-正常，1-已删除 */
-    @TableLogic
-    private Integer deleted;
-
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 

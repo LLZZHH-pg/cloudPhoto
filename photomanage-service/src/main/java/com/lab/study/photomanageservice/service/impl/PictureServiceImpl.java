@@ -1,5 +1,6 @@
 package com.lab.study.photomanageservice.service.impl;
 
+import com.LAB.study.dto.PictureDTO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -69,10 +70,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
         return groupedMap.entrySet().stream()
                 .map(entry -> {
-                    TimelineVO timelineDTO = new TimelineVO();
-                    timelineDTO.setDate(entry.getKey());
-                    timelineDTO.setPictures(entry.getValue());
-                    return timelineDTO;
+                    TimelineVO vo = new TimelineVO();
+                    vo.setDate(entry.getKey());
+                    vo.setPictures(entry.getValue());
+                    return vo;
                 })
                 .sorted((t1, t2) -> t2.getDate().compareTo(t1.getDate()))
                 .collect(Collectors.toList());
@@ -116,8 +117,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             picture.setFileExif(exifJson);
 
             this.save(picture);
-
-            // 5. 删除本地临时文件（Spring 的 MultipartFile 通常在请求结束后自动清理，若有自建落地文件需手动 IO 删除）
         }
     }
 
@@ -169,6 +168,20 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         this.removeByIds(ids);
     }
 
+    @Override
+    public List<PictureDTO> getPicturesByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        LambdaQueryWrapper<Picture> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(Picture::getPictureid, ids)
+                .isNull(Picture::getDeleteTime);
+
+        return this.list(queryWrapper).stream()
+                .map(this::convertToDTOWithThumbnail)
+                .collect(Collectors.toList());
+    }
+
     private PictureVO convertToVOWithThumbnail(Picture picture) {
         PictureVO vo = new PictureVO();
         vo.setPictureid(picture.getPictureid());
@@ -176,6 +189,12 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         vo.setDeleteTime(picture.getDeleteTime());
         vo.setPreviewUrl(picture.getFileUrl() + "?imageView2/1/w/200/h/200");
         return vo;
+    }
+    private PictureDTO convertToDTOWithThumbnail(Picture picture) {
+        PictureDTO dto = new PictureDTO();
+        dto.setPictureid(picture.getPictureid());
+        dto.setPreviewUrl(picture.getFileUrl() + "?imageView2/1/w/200/h/200");
+        return dto;
     }
 
     private PictureVO convertToVOWithHDPreview(Picture picture) {

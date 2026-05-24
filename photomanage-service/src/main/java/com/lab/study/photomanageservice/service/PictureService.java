@@ -1,5 +1,6 @@
 package com.lab.study.photomanageservice.service;
 
+import com.LAB.study.dto.PictureDTO;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.LAB.study.vo.PictureVO;
 import com.LAB.study.vo.TimelineVO;
@@ -23,4 +24,6 @@ public interface PictureService extends IService<Picture> {
     void restorePictures(List<Long> ids, Integer userId);
 
     void cleanTrash(List<Long> ids, Integer userId);
+
+    List<PictureDTO> getPicturesByIds(List<Long> ids);
 }
