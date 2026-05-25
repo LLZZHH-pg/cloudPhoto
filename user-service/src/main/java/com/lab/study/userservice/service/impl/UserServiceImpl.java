@@ -1,6 +1,7 @@
 package com.lab.study.userservice.service.impl;
 
 import com.LAB.study.dto.RegisterDTO;
+import com.LAB.study.dto.UserInfoDTO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
@@ -11,11 +12,14 @@ import com.lab.study.userservice.utils.JwtUtil;
 import io.jsonwebtoken.security.Keys;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
@@ -154,14 +158,45 @@ public class UserServiceImpl implements UserService {
 
         userMapper.insert(user);
     }
+
+    @Override
+    public UserInfoDTO getUserById(Integer userId) {
+        User user = userMapper.selectById(userId);
+        return convertToDTO(user);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateUsedStorage(Integer userId, Long sizeDelta) {
+        if (sizeDelta == 0) {
+            return;
+        }
+
+        if (sizeDelta > 0) {
+            // 需要增加使用容量时（如上传照片）
+            int updated = userMapper.deductStorage(userId, sizeDelta);
+            if (updated == 0) {
+                throw new RuntimeException("操作失败，您的存储空间不足，请清理后重试");
+            }
+        } else {
+            // 需要释放使用容量时（如彻底清理回收站，传入负数）
+            userMapper.releaseStorage(userId, Math.abs(sizeDelta));
+        }
+    }
+
+    private UserInfoDTO convertToDTO(User user) {
+        if (user == null) {
+            return null;
+        }
+        UserInfoDTO dto = new UserInfoDTO();
+        BeanUtils.copyProperties(user, dto);
+        return dto;
+    }
     private void checkUnique(SFunction<User, ?> column, String value, String msg) {
         if (StringUtils.hasText(value) && userMapper.selectCount(Wrappers.<User>lambdaQuery().eq(column, value)) > 0) {
             throw new RuntimeException(msg);
         }
     }
 
-    @Override
-    public User getUserById(Integer userId) {
-        return userMapper.selectById(userId);
-    }
+
 }

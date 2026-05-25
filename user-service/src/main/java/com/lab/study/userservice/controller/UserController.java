@@ -2,6 +2,7 @@ package com.lab.study.userservice.controller;
 
 import com.LAB.study.dto.LoginDTO;
 import com.LAB.study.dto.RegisterDTO;
+import com.LAB.study.dto.UserInfoDTO;
 import com.LAB.study.result.Result;
 import com.lab.study.userservice.entity.User;
 import com.lab.study.userservice.service.UserService;
@@ -27,9 +28,6 @@ public class UserController {
         }
     }
 
-    /**
-     * 注册接口
-     */
     @PostMapping("/register")
     public Result register(@RequestBody RegisterDTO dto) {
         try {
@@ -40,17 +38,23 @@ public class UserController {
         }
     }
 
-    /**
-     * 内部接口：根据ID获取用户信息
-     * 供网关验证Token后查询用户详情
-     */
     @GetMapping("/info/{id}")
-    public Result<User> getUserInfo(@PathVariable Integer id) {
-        User user = userService.getUserById(id);
-        if (user != null) {
-            return Result.success(user);
+    public Result<UserInfoDTO> getUserInfo(@PathVariable Integer id) {
+        UserInfoDTO dto = userService.getUserById(id);
+        if (dto != null) {
+            return Result.success(dto);
         } else {
             return Result.error("用户不存在");
+        }
+    }
+
+    @PostMapping("/internal/storage/update")
+    public Result<Void> updateStorage(@RequestParam("userId") Integer userId, @RequestParam("sizeDelta") Long sizeDelta) {
+        try {
+            userService.updateUsedStorage(userId, sizeDelta);
+            return Result.success();
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
         }
     }
 }

@@ -1,6 +1,8 @@
 package com.lab.study.photomanageservice.service.impl;
 
 import com.LAB.study.dto.PictureDTO;
+import com.LAB.study.dto.UserInfoDTO;
+import com.LAB.study.result.Result;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -9,6 +11,7 @@ import com.LAB.study.vo.PictureVO;
 import com.LAB.study.vo.TimelineVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lab.study.photomanageservice.entity.Picture;
+import com.lab.study.photomanageservice.feign.UserFeign;
 import com.lab.study.photomanageservice.mapper.PictureMapper;
 import com.lab.study.photomanageservice.service.PictureService;
 import com.qiniu.common.QiniuException;
@@ -18,6 +21,7 @@ import com.qiniu.storage.Region;
 import com.qiniu.storage.UploadManager;
 import com.qiniu.storage.BucketManager;
 import com.qiniu.util.Auth;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -53,6 +57,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     private String bucket;
     @Value("${qiniu.domain}")
     private String domain;
+
+    @Autowired
+    private UserFeign userFeign;
 
     @Override
     public List<TimelineVO> getTimeline(Integer userId, long current, long size) {
@@ -94,6 +101,31 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void uploadPictures(MultipartFile[] files, Integer userId) {
+        if (files == null || files.length == 0) {
+            return;
+        }
+
+        // 1. 预先计算本次上传需要的所有文件大小总和 (字节)
+        long totalSizeNeeded = 0;
+        for (MultipartFile file : files) {
+            totalSizeNeeded += file.getSize();
+        }
+
+        // 2. 调用 UserFeign 获取用户信息，检查剩余容量
+        Result<UserInfoDTO> userInfoResult = userFeign.getUserInfo(userId);
+
+        UserInfoDTO userInfo = userInfoResult.getData();
+
+        long totalStorage = userInfo.getTotalstorage() != null ? userInfo.getTotalstorage() : 0L;
+        long usedStorage = userInfo.getUsedstorage() != null ? userInfo.getUsedstorage() : 0L;
+        long remainStorage = totalStorage - usedStorage;
+
+        if (totalSizeNeeded > remainStorage) {
+            throw new RuntimeException("存储空间不足，剩余空间：" + (remainStorage / 1024 / 1024) + "MB，本次需要：" + (totalSizeNeeded / 1024 / 1024) + "MB");
+        }
+
+        // 3. 空间充足，执行上传和数据库保存
+        long actualUploadedSize = 0;
         for (MultipartFile file : files) {
             String hash = calculateHash(file);
             LambdaQueryWrapper<Picture> queryWrapper = new LambdaQueryWrapper<>();
@@ -105,8 +137,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             String exifJson = extractExif(file);
             LocalDateTime shotTime = extractShotTime(file);
 
+            // 上传七牛云
             String qiniuUrl = uploadToQiniu(file);
 
+            // 保存到数据库
             Picture picture = new Picture();
             picture.setUserid(userId);
             picture.setFileHash(hash);
@@ -117,6 +151,17 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             picture.setFileExif(exifJson);
 
             this.save(picture);
+
+            // 记录实际产生的新文件大小
+            actualUploadedSize += file.getSize();
+        }
+
+        // 4. 同步更新用户已使用容量
+        if (actualUploadedSize > 0) {
+            Result<Void> updateResult = userFeign.updateStorage(userId, actualUploadedSize);
+            if (updateResult.getCode() != 200) {
+                throw new RuntimeException("更新存储空间失败");
+            }
         }
     }
 
@@ -162,10 +207,25 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
         List<Picture> pictures = this.listByIds(ids);
         if (pictures.isEmpty()) return;
+
+        long totalFreedSize = 0;
+
         for (Picture p : pictures) {
             deleteFromQiniu(p.getFileUrl());
+            if (p.getFileSize() != null) {
+                totalFreedSize += p.getFileSize();
+            }
         }
+
         this.removeByIds(ids);
+
+        if (totalFreedSize > 0) {
+            // 传负数表示释放配额
+            Result<Void> updateResult = userFeign.updateStorage(userId, -totalFreedSize);
+            if (updateResult.getCode() != 200) {
+                throw new RuntimeException("清理回收站空间回收异常：" + updateResult.getMessage());
+            }
+        }
     }
 
     @Override
