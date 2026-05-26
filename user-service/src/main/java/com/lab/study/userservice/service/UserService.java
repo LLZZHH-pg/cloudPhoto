@@ -2,7 +2,7 @@ package com.lab.study.userservice.service;
 
 import com.LAB.study.dto.RegisterDTO;
 import com.LAB.study.dto.UserInfoDTO;
-import com.lab.study.userservice.entity.User;
+
 import java.util.Map;
 
 /**
@@ -18,4 +18,6 @@ public interface UserService {
     UserInfoDTO getUserById(Integer userId);
 
     void updateUsedStorage(Integer userId, Long sizeDelta);
+
+    void updateRegister(RegisterDTO dto, Integer integer);
 }

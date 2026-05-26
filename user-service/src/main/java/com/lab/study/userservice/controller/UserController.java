@@ -1,5 +1,6 @@
 package com.lab.study.userservice.controller;
 
+import com.LAB.study.context.UserContextHolder;
 import com.LAB.study.dto.LoginDTO;
 import com.LAB.study.dto.RegisterDTO;
 import com.LAB.study.dto.UserInfoDTO;
@@ -17,6 +18,10 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    private Integer currentUserId() {
+        return UserContextHolder.getCurrentUserId();
+    }
     
     @PostMapping("/login")
     public Result login(@RequestBody LoginDTO dto) {
@@ -38,13 +43,32 @@ public class UserController {
         }
     }
 
-    @GetMapping("/info/{id}")
-    public Result<UserInfoDTO> getUserInfo(@PathVariable Integer id) {
+    @GetMapping("/info")
+    public Result<UserInfoDTO> getUserInfo() {
+        UserInfoDTO dto = userService.getUserById(currentUserId());
+        if (dto != null) {
+            return Result.success(dto);
+        } else {
+            return Result.error("用户不存在");
+        }
+    }
+    @GetMapping("/internal/info/{id}")
+    public Result<UserInfoDTO> getUserInfo(@RequestBody Integer id) {
         UserInfoDTO dto = userService.getUserById(id);
         if (dto != null) {
             return Result.success(dto);
         } else {
             return Result.error("用户不存在");
+        }
+    }
+
+    @PostMapping("/info/update")
+    public Result updateUserInfo(@RequestBody RegisterDTO dto) {
+        try {
+            userService.updateRegister(dto,currentUserId());
+            return Result.success("修改成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
         }
     }
 

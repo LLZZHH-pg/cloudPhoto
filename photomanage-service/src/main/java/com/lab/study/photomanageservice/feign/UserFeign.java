@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 @FeignClient(name = "user-service")
 public interface UserFeign {
 
-    @GetMapping("/user/info/{id}")
-    Result<UserInfoDTO> getUserInfo(@PathVariable("id") Integer id);
+    @GetMapping("/user/internal/info/{id}")
+    Result<UserInfoDTO> getUserInfo(@PathVariable Integer id);
 
     @PostMapping("/user/internal/storage/update")
     Result<Void> updateStorage(@RequestParam("userId") Integer userId, @RequestParam("sizeDelta") Long sizeDelta);

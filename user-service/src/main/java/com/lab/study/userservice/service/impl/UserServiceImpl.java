@@ -69,7 +69,7 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("该账号不存在，请检查输入或先注册");
         }
 
-        // 校验密码 (使用 BCrypt)
+        // 校验密码
         if (!passwordEncoder.matches(password, user.getPas())) {
             throw new RuntimeException("密码错误，请重试");
         }
@@ -121,6 +121,72 @@ public class UserServiceImpl implements UserService {
         // 电话格式校验
         if (!PHONE_PATTERN.matcher(tel).matches()) {
             throw new RuntimeException("电话号码必须是11位纯数字");
+
+        }
+        checkUnique(User::getTel, tel, "手机号已存在");
+        // 用户名校验
+        if (!nam.isEmpty()) {
+            if (nam.length() < 2) {
+                throw new RuntimeException("用户名不能少于2个字符");
+            }
+            if (NUMBER_ONLY_PATTERN.matcher(nam).matches()) {
+                throw new RuntimeException("用户名不能是纯数字");
+            }
+            if (!USERNAME_PATTERN.matcher(nam).matches()) {
+                throw new RuntimeException("用户名只能包含中英文和数字，不能使用符号");
+            }
+            checkUnique(User::getNam, nam, "用户名已存在");
+        }
+        // 邮箱格式校验
+        if (!eml.isEmpty()) {
+            if (!EMAIL_PATTERN.matcher(eml).matches()) {
+                throw new RuntimeException("邮箱格式不正确");
+            }
+            checkUnique(User::getEml, eml, "邮箱已存在");
+        }
+
+        // 赋值与插入
+        User user = new User();
+        user.setNam(nam);
+        user.setPas(passwordEncoder.encode(pas));
+        user.setTel(tel);
+        user.setEml(eml);
+        // 默认配额 1GB
+        user.setTotalstorage(1024L * 1024 * 1024);
+        user.setUsedstorage(0L);
+
+        userMapper.insert(user);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateRegister(RegisterDTO dto,Integer userId) {
+
+        String nam = dto.getNam() == null ? "" : dto.getNam().trim();
+        String pas = dto.getPas() == null ? "" : dto.getPas().trim();
+        String tel = dto.getTel() == null ? "" : dto.getTel().trim();
+        String eml = dto.getEml() == null ? "" : dto.getEml().trim();
+
+        User user = new User();
+        user.setUserId(userId);
+
+        // 密码校验
+        if (!pas.isEmpty()) {
+            if (pas.length() < 6) {
+                throw new RuntimeException("密码长度不能少于6位");
+            }
+
+            user.setPas(passwordEncoder.encode(pas));
+        }
+        // 电话格式校验
+        if (!tel.isEmpty()) {
+
+            if (!PHONE_PATTERN.matcher(tel).matches()) {
+                throw new RuntimeException("电话号码必须是11位纯数字");
+            }
+            checkUniqueExceptSelf(User::getTel, tel,userId, "手机号已存在");
+
+            user.setTel(tel);
         }
         // 用户名校验
         if (!nam.isEmpty()) {
@@ -133,30 +199,21 @@ public class UserServiceImpl implements UserService {
             if (!USERNAME_PATTERN.matcher(nam).matches()) {
                 throw new RuntimeException("用户名只能包含中英文和数字，不能使用符号");
             }
+            checkUniqueExceptSelf(User::getNam, nam,userId, "用户名已存在");
+
+            user.setNam(nam);
         }
         // 邮箱格式校验
         if (!eml.isEmpty()) {
             if (!EMAIL_PATTERN.matcher(eml).matches()) {
                 throw new RuntimeException("邮箱格式不正确");
             }
+            checkUniqueExceptSelf(User::getEml, eml,userId, "邮箱已存在");
+
+            user.setEml(eml);
         }
 
-        // 2. 唯一性校验
-        checkUnique(User::getNam, nam, "用户名已存在");
-        checkUnique(User::getTel, tel, "手机号已存在");
-        checkUnique(User::getEml, eml, "邮箱已存在");
-
-        // 3. 赋值与插入
-        User user = new User();
-        user.setNam(nam);
-        user.setPas(passwordEncoder.encode(pas));
-        user.setTel(tel);
-        user.setEml(eml);
-        // 默认配额 1GB
-        user.setTotalstorage(1024L * 1024 * 1024);
-        user.setUsedstorage(0L);
-
-        userMapper.insert(user);
+        userMapper.updateById(user);
     }
 
     @Override
@@ -192,9 +249,20 @@ public class UserServiceImpl implements UserService {
         BeanUtils.copyProperties(user, dto);
         return dto;
     }
+
     private void checkUnique(SFunction<User, ?> column, String value, String msg) {
         if (StringUtils.hasText(value) && userMapper.selectCount(Wrappers.<User>lambdaQuery().eq(column, value)) > 0) {
             throw new RuntimeException(msg);
+        }
+    }
+    private void checkUniqueExceptSelf(SFunction<User, ?> column, String value, Integer excludeUserId, String msg) {
+        if (StringUtils.hasText(value)) {
+            long count = userMapper.selectCount(Wrappers.<User>lambdaQuery()
+                    .eq(column, value)
+                    .ne(User::getUserId, excludeUserId)); // 核心：增加“不等于当前用户ID”的条件
+            if (count > 0) {
+                throw new RuntimeException(msg);
+            }
         }
     }
 
