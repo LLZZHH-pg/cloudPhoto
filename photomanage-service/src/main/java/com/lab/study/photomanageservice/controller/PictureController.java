@@ -45,6 +45,12 @@ public class PictureController {
         pictureService.uploadPictures(files, currentUserId());
         return Result.success();
     }
+
+    @GetMapping("/download/{id}")
+    public Result<String> getDownloadUrl(@PathVariable Long id) {
+        String downloadUrl = pictureService.getDownloadUrl(id, currentUserId());
+        return Result.success(downloadUrl);
+    }
     
     @PostMapping("/delete")
     public Result<Void> deletePictures(@RequestBody List<Long> ids) {

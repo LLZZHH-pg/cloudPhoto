@@ -53,7 +53,7 @@ public class UserController {
         }
     }
     @GetMapping("/internal/info/{id}")
-    public Result<UserInfoDTO> getUserInfo(@RequestBody Integer id) {
+    public Result<UserInfoDTO> getUserInfo(@PathVariable Integer id) {
         UserInfoDTO dto = userService.getUserById(id);
         if (dto != null) {
             return Result.success(dto);

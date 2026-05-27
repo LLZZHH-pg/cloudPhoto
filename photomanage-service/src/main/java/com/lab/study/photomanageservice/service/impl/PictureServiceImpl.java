@@ -35,15 +35,11 @@ import com.drew.metadata.exif.ExifIFD0Directory;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
 
 import java.io.InputStream;
+import java.net.URLEncoder;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.UUID;
-
 
 
 @Service
@@ -60,6 +56,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
     @Autowired
     private UserFeign userFeign;
+
+    private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList(
+            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
+            "image/bmp", "image/svg+xml", "image/tiff", "image/avif"
+    );
 
     @Override
     public List<TimelineVO> getTimeline(Integer userId, long current, long size) {
@@ -108,6 +109,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         // 1. 预先计算本次上传需要的所有文件大小总和 (字节)
         long totalSizeNeeded = 0;
         for (MultipartFile file : files) {
+            String contentType = file.getContentType();
+            if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
+                throw new IllegalArgumentException("不支持的图片格式");
+            }
             totalSizeNeeded += file.getSize();
         }
 
@@ -162,6 +167,30 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             if (updateResult.getCode() != 200) {
                 throw new RuntimeException("更新存储空间失败");
             }
+        }
+    }
+
+        @Override
+        public String getDownloadUrl(Long id, Integer userId) {
+        LambdaQueryWrapper<Picture> query = new LambdaQueryWrapper<>();
+        query.eq(Picture::getPictureid, id)
+                .eq(Picture::getUserid, userId);
+        Picture picture = this.getOne(query);
+        if (picture == null || picture.getDeleteTime() != null) {
+            throw new IllegalArgumentException("图片不存在或已被移至回收站");
+        }
+
+        String rawUrl = picture.getFileUrl();
+        try {
+            // 将原始文件名进行 URL 编码以避免中文字符报错
+            String encodedFileName = URLEncoder.encode(picture.getFileName(), "UTF-8");
+            // attname 是七牛云用来强制触发文件下载并重命名的内置参数
+            String downloadUrl = rawUrl + "-normal" + "?attname=" + encodedFileName;
+            // 统一使用私有空间签名机制
+            return signUrl(downloadUrl);
+        } catch (Exception e) {
+            // 发生异常时退化为直接返回文件链接
+            return signUrl(rawUrl);
         }
     }
 
@@ -247,21 +276,30 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         vo.setPictureid(picture.getPictureid());
         vo.setShotTime(picture.getShotTime());
         vo.setDeleteTime(picture.getDeleteTime());
-        vo.setPreviewUrl(picture.getFileUrl() + "?imageView2/1/w/200/h/200");
+        String rawUrl = picture.getFileUrl() + "-thumb";
+        vo.setPreviewUrl(signUrl(rawUrl));
         return vo;
     }
+
     private PictureDTO convertToDTOWithThumbnail(Picture picture) {
         PictureDTO dto = new PictureDTO();
         dto.setPictureid(picture.getPictureid());
-        dto.setPreviewUrl(picture.getFileUrl() + "?imageView2/1/w/200/h/200");
+        String rawUrl = picture.getFileUrl() + "-thumb";
+        dto.setPreviewUrl(signUrl(rawUrl));
         return dto;
     }
 
     private PictureVO convertToVOWithHDPreview(Picture picture) {
         PictureVO vo = new PictureVO();
         BeanUtils.copyProperties(picture, vo);
-        vo.setPreviewUrl(picture.getFileUrl() + "?imageView2/2/w/1920/q/90");
+        String rawUrl = picture.getFileUrl() + "-normal";
+        vo.setPreviewUrl(signUrl(rawUrl));
         return vo;
+    }
+
+    private String signUrl(String url) {
+        Auth auth = Auth.create(accessKey, secretKey);
+        return auth.privateDownloadUrl(url, 3600);
     }
 
     private String calculateHash(MultipartFile file) {

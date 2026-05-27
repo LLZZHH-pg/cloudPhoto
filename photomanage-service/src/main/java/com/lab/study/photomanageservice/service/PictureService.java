@@ -17,6 +17,8 @@ public interface PictureService extends IService<Picture> {
 
     void uploadPictures(MultipartFile[] files, Integer userId);
 
+    String getDownloadUrl(Long id, Integer userId);
+
     void deletePictures(List<Long> ids, Integer userId);
 
     List<PictureVO> getTrashList(Integer userId);
