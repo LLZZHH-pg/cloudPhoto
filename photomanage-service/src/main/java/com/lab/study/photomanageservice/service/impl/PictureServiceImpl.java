@@ -170,28 +170,29 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         }
     }
 
-        @Override
-        public String getDownloadUrl(Long id, Integer userId) {
-        LambdaQueryWrapper<Picture> query = new LambdaQueryWrapper<>();
-        query.eq(Picture::getPictureid, id)
-                .eq(Picture::getUserid, userId);
-        Picture picture = this.getOne(query);
-        if (picture == null || picture.getDeleteTime() != null) {
-            throw new IllegalArgumentException("图片不存在或已被移至回收站");
+    @Override
+    public List<String> getDownloadUrls(List<Long> ids, Integer userId) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
         }
 
-        String rawUrl = picture.getFileUrl();
-        try {
-            // 将原始文件名进行 URL 编码以避免中文字符报错
-            String encodedFileName = URLEncoder.encode(picture.getFileName(), "UTF-8");
-            // attname 是七牛云用来强制触发文件下载并重命名的内置参数
-            String downloadUrl = rawUrl + "-normal" + "?attname=" + encodedFileName;
-            // 统一使用私有空间签名机制
-            return signUrl(downloadUrl);
-        } catch (Exception e) {
-            // 发生异常时退化为直接返回文件链接
-            return signUrl(rawUrl);
-        }
+        LambdaQueryWrapper<Picture> query = new LambdaQueryWrapper<>();
+        query.in(Picture::getPictureid, ids)
+                .eq(Picture::getUserid, userId)
+                .isNull(Picture::getDeleteTime);
+        List<Picture> pictures = this.list(query);
+
+        return pictures.stream().map(picture -> {
+            String rawUrl = picture.getFileUrl();
+            try {
+                String encodedFileName = URLEncoder.encode(picture.getFileName(), "UTF-8");
+                // 拼接样式名 -normal 并配合 attname
+                String downloadUrl = rawUrl + "-normal?attname=" + encodedFileName;
+                return signUrl(downloadUrl);
+            } catch (Exception e) {
+                return signUrl(rawUrl + "-normal");
+            }
+        }).collect(Collectors.toList());
     }
 
     @Override

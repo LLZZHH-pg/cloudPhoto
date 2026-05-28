@@ -46,10 +46,13 @@ public class PictureController {
         return Result.success();
     }
 
-    @GetMapping("/download/{id}")
-    public Result<String> getDownloadUrl(@PathVariable Long id) {
-        String downloadUrl = pictureService.getDownloadUrl(id, currentUserId());
-        return Result.success(downloadUrl);
+    @PostMapping("/download/batch")
+    public Result<List<String>> getBatchDownloadUrls(@RequestBody List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Result.error(400, "请选择要下载的图片");
+        }
+        List<String> downloadUrls = pictureService.getDownloadUrls(ids, currentUserId());
+        return Result.success(downloadUrls);
     }
     
     @PostMapping("/delete")
