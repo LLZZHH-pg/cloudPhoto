@@ -2,6 +2,8 @@ package com.lab.study.albummanageservice.service;
 
 import com.LAB.study.dto.AlbumPhotoRequest;
 import com.LAB.study.dto.AlbumRequest;
+import com.LAB.study.dto.CopyPhotoRequest;
+import com.LAB.study.dto.MovePhotoRequest;
 import com.LAB.study.vo.AlbumVO;
 
 import java.util.List;
@@ -72,6 +74,24 @@ public interface AlbumService {
      * @param request 照片ID列表
      */
     void removePhotos(Integer userId, Long albumId, AlbumPhotoRequest request);
+
+    /**
+     * 移动照片：将照片从源影集移动到目标影集（源影集删除，目标影集新增）
+     *
+     * @param userId   当前登录用户ID
+     * @param sourceAlbumId 源影集ID
+     * @param request  照片ID列表 + 目标影集ID
+     */
+    void movePhotos(Integer userId, Long sourceAlbumId, MovePhotoRequest request);
+
+    /**
+     * 复制照片：将照片从源影集复制到多个目标影集（源影集保留，目标影集新增）
+     *
+     * @param userId   当前登录用户ID
+     * @param sourceAlbumId 源影集ID
+     * @param request  照片ID列表 + 目标影集ID列表
+     */
+    void copyPhotos(Integer userId, Long sourceAlbumId, CopyPhotoRequest request);
 
     /**
      * 获取公开影集列表（无需登录）

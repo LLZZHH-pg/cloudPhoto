@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.LAB.study.dto.AlbumPhotoRequest;
 import com.LAB.study.dto.AlbumRequest;
+import com.LAB.study.dto.CopyPhotoRequest;
+import com.LAB.study.dto.MovePhotoRequest;
 import com.lab.study.albummanageservice.entity.Album;
 import com.lab.study.albummanageservice.entity.AlbumPhoto;
 import com.lab.study.albummanageservice.feign.PhotoFeign;
@@ -219,6 +221,99 @@ public class AlbumServiceImpl implements AlbumService {
         );
 
         updatePhotoCount(albumId);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // 移动照片：从源影集移除，添加到目标影集
+    // ─────────────────────────────────────────────────────────
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void movePhotos(Integer userId, Long sourceAlbumId, MovePhotoRequest request) {
+        getAlbumAndCheckOwner(userId, sourceAlbumId);
+
+        List<Long> photoIds = request.getPhotoIds();
+        Long targetAlbumId = request.getTargetAlbumId();
+        if (photoIds == null || photoIds.isEmpty()) {
+            return;
+        }
+        if (targetAlbumId == null) {
+            throw new RuntimeException("目标影集ID不能为空");
+        }
+        if (targetAlbumId.equals(sourceAlbumId)) {
+            throw new RuntimeException("目标影集不能与源影集相同");
+        }
+        getAlbumAndCheckOwner(userId, targetAlbumId);
+
+        // 从源影集移除照片
+        albumPhotoMapper.delete(
+                new LambdaQueryWrapper<AlbumPhoto>()
+                        .eq(AlbumPhoto::getAlbumId, sourceAlbumId)
+                        .in(AlbumPhoto::getPhotoId, photoIds)
+        );
+
+        // 向目标影集添加照片（去重）
+        List<Long> existingInTarget = albumPhotoMapper.selectPhotoIdsByAlbumId(targetAlbumId);
+        List<AlbumPhoto> toInsert = photoIds.stream()
+                .filter(photoId -> !existingInTarget.contains(photoId))
+                .map(photoId -> {
+                    AlbumPhoto ap = new AlbumPhoto();
+                    ap.setAlbumId(targetAlbumId);
+                    ap.setPhotoId(photoId);
+                    return ap;
+                })
+                .collect(Collectors.toList());
+
+        for (AlbumPhoto ap : toInsert) {
+            albumPhotoMapper.insert(ap);
+        }
+
+        updatePhotoCount(sourceAlbumId);
+        updatePhotoCount(targetAlbumId);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // 复制照片：保留源影集照片，复制到多个目标影集
+    // ─────────────────────────────────────────────────────────
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void copyPhotos(Integer userId, Long sourceAlbumId, CopyPhotoRequest request) {
+        getAlbumAndCheckOwner(userId, sourceAlbumId);
+
+        List<Long> photoIds = request.getPhotoIds();
+        List<Long> targetAlbumIds = request.getTargetAlbumIds();
+        if (photoIds == null || photoIds.isEmpty()) {
+            return;
+        }
+        if (targetAlbumIds == null || targetAlbumIds.isEmpty()) {
+            throw new RuntimeException("目标影集ID列表不能为空");
+        }
+
+        // 校验所有目标影集属于当前用户
+        for (Long targetAlbumId : targetAlbumIds) {
+            if (targetAlbumId.equals(sourceAlbumId)) {
+                throw new RuntimeException("目标影集不能与源影集相同");
+            }
+            getAlbumAndCheckOwner(userId, targetAlbumId);
+        }
+
+        // 向每个目标影集添加照片（去重）
+        for (Long targetAlbumId : targetAlbumIds) {
+            List<Long> existing = albumPhotoMapper.selectPhotoIdsByAlbumId(targetAlbumId);
+            List<AlbumPhoto> toInsert = photoIds.stream()
+                    .filter(photoId -> !existing.contains(photoId))
+                    .map(photoId -> {
+                        AlbumPhoto ap = new AlbumPhoto();
+                        ap.setAlbumId(targetAlbumId);
+                        ap.setPhotoId(photoId);
+                        return ap;
+                    })
+                    .collect(Collectors.toList());
+
+            for (AlbumPhoto ap : toInsert) {
+                albumPhotoMapper.insert(ap);
+            }
+            updatePhotoCount(targetAlbumId);
+        }
     }
 
     // ─────────────────────────────────────────────────────────

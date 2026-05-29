@@ -4,6 +4,8 @@ import com.LAB.study.context.UserContextHolder;
 import com.LAB.study.result.Result;
 import com.LAB.study.dto.AlbumPhotoRequest;
 import com.LAB.study.dto.AlbumRequest;
+import com.LAB.study.dto.CopyPhotoRequest;
+import com.LAB.study.dto.MovePhotoRequest;
 import com.lab.study.albummanageservice.service.AlbumService;
 import com.LAB.study.vo.AlbumVO;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,8 @@ import java.util.List;
  *   GET    /album/{id}                查询影集详情（含照片ID）
  *   POST   /album/{id}/photos/add     向影集添加照片
  *   POST   /album/{id}/photos/remove  从影集移除照片
+ *   POST   /album/{id}/photos/move    移动照片到其他影集
+ *   POST   /album/{id}/photos/copy    复制照片到其他影集
  *   GET    /album/public              查询所有公开影集
  */
 @RestController
@@ -103,6 +107,28 @@ public class AlbumController {
             @PathVariable Long id,
             @RequestBody AlbumPhotoRequest request) {
         albumService.removePhotos(currentUserId(), id, request);
+        return Result.success();
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // 移动照片到其他影集
+    // ─────────────────────────────────────────────────────────
+    @PostMapping("/{id}/photos/move")
+    public Result<Void> movePhotos(
+            @PathVariable Long id,
+            @RequestBody MovePhotoRequest request) {
+        albumService.movePhotos(currentUserId(), id, request);
+        return Result.success();
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // 复制照片到其他影集
+    // ─────────────────────────────────────────────────────────
+    @PostMapping("/{id}/photos/copy")
+    public Result<Void> copyPhotos(
+            @PathVariable Long id,
+            @RequestBody CopyPhotoRequest request) {
+        albumService.copyPhotos(currentUserId(), id, request);
         return Result.success();
     }
 
