@@ -116,7 +116,7 @@ public class AlbumServiceImpl implements AlbumService {
         Map<Long, Long> firstPhotoMap = allRelations.stream()
                 .collect(Collectors.groupingBy(
                         AlbumPhoto::getAlbumId,
-                        Collectors.collectingAndThen(Collectors.toList(), list -> list.get(0).getPhotoId()) // 就取第一张
+                        Collectors.collectingAndThen(Collectors.toList(), list -> list.getFirst().getPhotoId()) // 就取第一张
                 ));
 
         // 去重需要进行 Feign 远程调用的 PhotoId 进行批量拉取
@@ -195,7 +195,7 @@ public class AlbumServiceImpl implements AlbumService {
                     ap.setPhotoId(photoId);
                     return ap;
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         // 批量插入新照片关联
         for (AlbumPhoto ap : toInsert) {
@@ -212,11 +212,11 @@ public class AlbumServiceImpl implements AlbumService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void removePhotos(Integer userId, AlbumPhotoRequest request) {
-        Long albumId = request.getAlbumId();
-        if (albumId == null) {
+        Long sourceAlbumId = request.getSourceAlbumId();
+        if (sourceAlbumId == null) {
             throw new RuntimeException("影集ID不能为空");
         }
-        getAlbumAndCheckOwner(userId, albumId);
+        getAlbumAndCheckOwner(userId, sourceAlbumId);
 
         if (request.getPhotoIds() == null || request.getPhotoIds().isEmpty()) {
             return;
@@ -224,11 +224,11 @@ public class AlbumServiceImpl implements AlbumService {
 
         albumPhotoMapper.delete(
                 new LambdaQueryWrapper<AlbumPhoto>()
-                        .eq(AlbumPhoto::getAlbumId, albumId)
+                        .eq(AlbumPhoto::getAlbumId, sourceAlbumId)
                         .in(AlbumPhoto::getPhotoId, request.getPhotoIds())
         );
 
-        updatePhotoCount(albumId);
+        updatePhotoCount(sourceAlbumId);
     }
 
     // ─────────────────────────────────────────────────────────
@@ -273,7 +273,7 @@ public class AlbumServiceImpl implements AlbumService {
                     ap.setPhotoId(photoId);
                     return ap;
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         for (AlbumPhoto ap : toInsert) {
             albumPhotoMapper.insert(ap);
@@ -323,7 +323,7 @@ public class AlbumServiceImpl implements AlbumService {
                         ap.setPhotoId(photoId);
                         return ap;
                     })
-                    .collect(Collectors.toList());
+                    .toList();
 
             for (AlbumPhoto ap : toInsert) {
                 albumPhotoMapper.insert(ap);
