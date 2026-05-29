@@ -61,37 +61,33 @@ public interface AlbumService {
      * 向影集添加照片
      *
      * @param userId  当前登录用户ID
-     * @param albumId 影集ID
-     * @param request 照片ID列表
+     * @param request 影集ID + 照片ID列表
      */
-    void addPhotos(Integer userId, Long albumId, AlbumPhotoRequest request);
+    void addPhotos(Integer userId, AlbumPhotoRequest request);
 
     /**
      * 从影集移除照片
      *
      * @param userId  当前登录用户ID
-     * @param albumId 影集ID
-     * @param request 照片ID列表
+     * @param request 影集ID + 照片ID列表
      */
-    void removePhotos(Integer userId, Long albumId, AlbumPhotoRequest request);
+    void removePhotos(Integer userId, AlbumPhotoRequest request);
 
     /**
      * 移动照片：将照片从源影集移动到目标影集（源影集删除，目标影集新增）
      *
-     * @param userId   当前登录用户ID
-     * @param sourceAlbumId 源影集ID
-     * @param request  照片ID列表 + 目标影集ID
+     * @param userId  当前登录用户ID
+     * @param request 源影集ID + 照片ID列表 + 目标影集ID
      */
-    void movePhotos(Integer userId, Long sourceAlbumId, MovePhotoRequest request);
+    void movePhotos(Integer userId, MovePhotoRequest request);
 
     /**
      * 复制照片：将照片从源影集复制到多个目标影集（源影集保留，目标影集新增）
      *
-     * @param userId   当前登录用户ID
-     * @param sourceAlbumId 源影集ID
-     * @param request  照片ID列表 + 目标影集ID列表
+     * @param userId  当前登录用户ID
+     * @param request 源影集ID + 照片ID列表 + 目标影集ID列表
      */
-    void copyPhotos(Integer userId, Long sourceAlbumId, CopyPhotoRequest request);
+    void copyPhotos(Integer userId, CopyPhotoRequest request);
 
     /**
      * 获取公开影集列表（无需登录）

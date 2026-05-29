@@ -173,7 +173,11 @@ public class AlbumServiceImpl implements AlbumService {
     // ─────────────────────────────────────────────────────────
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void addPhotos(Integer userId, Long albumId, AlbumPhotoRequest request) {
+    public void addPhotos(Integer userId, AlbumPhotoRequest request) {
+        Long albumId = request.getAlbumId();
+        if (albumId == null) {
+            throw new RuntimeException("影集ID不能为空");
+        }
         getAlbumAndCheckOwner(userId, albumId);
 
         if (request.getPhotoIds() == null || request.getPhotoIds().isEmpty()) {
@@ -207,7 +211,11 @@ public class AlbumServiceImpl implements AlbumService {
     // ─────────────────────────────────────────────────────────
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void removePhotos(Integer userId, Long albumId, AlbumPhotoRequest request) {
+    public void removePhotos(Integer userId, AlbumPhotoRequest request) {
+        Long albumId = request.getAlbumId();
+        if (albumId == null) {
+            throw new RuntimeException("影集ID不能为空");
+        }
         getAlbumAndCheckOwner(userId, albumId);
 
         if (request.getPhotoIds() == null || request.getPhotoIds().isEmpty()) {
@@ -228,7 +236,11 @@ public class AlbumServiceImpl implements AlbumService {
     // ─────────────────────────────────────────────────────────
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void movePhotos(Integer userId, Long sourceAlbumId, MovePhotoRequest request) {
+    public void movePhotos(Integer userId, MovePhotoRequest request) {
+        Long sourceAlbumId = request.getSourceAlbumId();
+        if (sourceAlbumId == null) {
+            throw new RuntimeException("源影集ID不能为空");
+        }
         getAlbumAndCheckOwner(userId, sourceAlbumId);
 
         List<Long> photoIds = request.getPhotoIds();
@@ -276,7 +288,11 @@ public class AlbumServiceImpl implements AlbumService {
     // ─────────────────────────────────────────────────────────
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void copyPhotos(Integer userId, Long sourceAlbumId, CopyPhotoRequest request) {
+    public void copyPhotos(Integer userId, CopyPhotoRequest request) {
+        Long sourceAlbumId = request.getSourceAlbumId();
+        if (sourceAlbumId == null) {
+            throw new RuntimeException("源影集ID不能为空");
+        }
         getAlbumAndCheckOwner(userId, sourceAlbumId);
 
         List<Long> photoIds = request.getPhotoIds();

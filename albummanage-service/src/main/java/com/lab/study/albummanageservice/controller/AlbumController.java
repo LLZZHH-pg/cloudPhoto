@@ -22,10 +22,10 @@ import java.util.List;
  *   PUT    /album/{id}                更新影集信息
  *   GET    /album/list                查询我的影集列表
  *   GET    /album/{id}                查询影集详情（含照片ID）
- *   POST   /album/{id}/photos/add     向影集添加照片
- *   POST   /album/{id}/photos/remove  从影集移除照片
- *   POST   /album/{id}/photos/move    移动照片到其他影集
- *   POST   /album/{id}/photos/copy    复制照片到其他影集
+ *   POST   /album/photos/add          向影集添加照片
+ *   POST   /album/photos/remove       从影集移除照片
+ *   POST   /album/photos/move         移动照片到其他影集
+ *   POST   /album/photos/copy         复制照片到其他影集
  *   GET    /album/public              查询所有公开影集
  */
 @RestController
@@ -91,44 +91,40 @@ public class AlbumController {
     // ─────────────────────────────────────────────────────────
     // 向影集添加照片
     // ─────────────────────────────────────────────────────────
-    @PostMapping("/{id}/photos/add")
+    @PostMapping("/photos/add")
     public Result<Void> addPhotos(
-            @PathVariable Long id,
             @RequestBody AlbumPhotoRequest request) {
-        albumService.addPhotos(currentUserId(), id, request);
+        albumService.addPhotos(currentUserId(), request);
         return Result.success();
     }
 
     // ─────────────────────────────────────────────────────────
     // 从影集移除照片
     // ─────────────────────────────────────────────────────────
-    @PostMapping("/{id}/photos/remove")
+    @PostMapping("/photos/remove")
     public Result<Void> removePhotos(
-            @PathVariable Long id,
             @RequestBody AlbumPhotoRequest request) {
-        albumService.removePhotos(currentUserId(), id, request);
+        albumService.removePhotos(currentUserId(), request);
         return Result.success();
     }
 
     // ─────────────────────────────────────────────────────────
     // 移动照片到其他影集
     // ─────────────────────────────────────────────────────────
-    @PostMapping("/{id}/photos/move")
+    @PostMapping("/photos/move")
     public Result<Void> movePhotos(
-            @PathVariable Long id,
             @RequestBody MovePhotoRequest request) {
-        albumService.movePhotos(currentUserId(), id, request);
+        albumService.movePhotos(currentUserId(), request);
         return Result.success();
     }
 
     // ─────────────────────────────────────────────────────────
     // 复制照片到其他影集
     // ─────────────────────────────────────────────────────────
-    @PostMapping("/{id}/photos/copy")
+    @PostMapping("/photos/copy")
     public Result<Void> copyPhotos(
-            @PathVariable Long id,
             @RequestBody CopyPhotoRequest request) {
-        albumService.copyPhotos(currentUserId(), id, request);
+        albumService.copyPhotos(currentUserId(), request);
         return Result.success();
     }
 
