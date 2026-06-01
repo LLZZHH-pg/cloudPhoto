@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
-// 这里的 name 为图片微服务在配置文件中的应用名(如: photomanage-service)
 @FeignClient(name = "photomanage-service")
 public interface PhotoFeign {
 

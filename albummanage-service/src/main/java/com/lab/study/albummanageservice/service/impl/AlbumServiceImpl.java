@@ -134,7 +134,13 @@ public class AlbumServiceImpl implements AlbumService {
                     for (AlbumVO vo : voList) {
                         Long firstId = firstPhotoMap.get(vo.getId());
                         if (firstId != null && photoMap.containsKey(firstId)) {
-                            vo.setPhotos(List.of(photoMap.get(firstId)));
+                            PictureDTO firstPic = photoMap.get(firstId);
+                            vo.setPhotos(List.of(firstPic));
+
+                            // 新增逻辑：若封面为空，选用首图填补
+                            if (vo.getCoverUrl() == null || vo.getCoverUrl().isBlank()) {
+                                vo.setCoverUrl(firstPic.getPreviewUrl());
+                            }
                         }
                     }
                 }
@@ -146,7 +152,7 @@ public class AlbumServiceImpl implements AlbumService {
     }
 
     // ─────────────────────────────────────────────────────────
-    // 获取影集详情（含照片ID列表，公开影集任何人可看）
+    // 获取影集详情（含照片ID列表）
     // ─────────────────────────────────────────────────────────
     @Override
     public AlbumVO getAlbumDetail(Integer userId, Long albumId) {
@@ -345,6 +351,31 @@ public class AlbumServiceImpl implements AlbumService {
         return albums.stream()
                 .map(a -> toVO(a, null))
                 .collect(Collectors.toList());
+    }
+
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void clearPhotosFromAlbums(List<Long> photoIds) {
+        if (photoIds == null || photoIds.isEmpty()) return;
+
+        // 获取到这些照片涉及的 albumId 以便更新影集计数
+        List<AlbumPhoto> affectedRelations = albumPhotoMapper.selectList(
+                new LambdaQueryWrapper<AlbumPhoto>().in(AlbumPhoto::getPhotoId, photoIds)
+        );
+
+        if (affectedRelations.isEmpty()) return;
+
+        // 从关联表删除
+        albumPhotoMapper.delete(new LambdaQueryWrapper<AlbumPhoto>().in(AlbumPhoto::getPhotoId, photoIds));
+
+        // 更新受影响的影集 photoCount
+        List<Long> affectedAlbumIds = affectedRelations.stream()
+                .map(AlbumPhoto::getAlbumId).distinct().toList();
+
+        for (Long albumId : affectedAlbumIds) {
+            updatePhotoCount(albumId);
+        }
     }
 
     // ─────────────────────────────────────────────────────────

@@ -137,5 +137,14 @@ public class AlbumController {
         return Result.success(list);
     }
 
+    // 内部接口
+    @DeleteMapping("/internal/photos/clear")
+    public Result<Void> clearPhotosFromAlbums(@RequestParam("photoIds") List<Long> photoIds) {
+        if (photoIds != null && !photoIds.isEmpty()) {
+            albumService.clearPhotosFromAlbums(photoIds);
+        }
+        return Result.success();
+    }
+
     
 }

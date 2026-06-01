@@ -95,4 +95,6 @@ public interface AlbumService {
      * @return 公开影集列表
      */
     List<AlbumVO> listPublicAlbums();
+
+    void clearPhotosFromAlbums(List<Long> photoIds);
 }

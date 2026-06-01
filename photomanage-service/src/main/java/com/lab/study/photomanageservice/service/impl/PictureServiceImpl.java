@@ -11,6 +11,7 @@ import com.LAB.study.vo.PictureVO;
 import com.LAB.study.vo.TimelineVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lab.study.photomanageservice.entity.Picture;
+import com.lab.study.photomanageservice.feign.AlbumFeign;
 import com.lab.study.photomanageservice.feign.UserFeign;
 import com.lab.study.photomanageservice.mapper.PictureMapper;
 import com.lab.study.photomanageservice.service.PictureService;
@@ -21,6 +22,7 @@ import com.qiniu.storage.Region;
 import com.qiniu.storage.UploadManager;
 import com.qiniu.storage.BucketManager;
 import com.qiniu.util.Auth;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.BeanUtils;
@@ -43,6 +45,7 @@ import java.util.stream.Collectors;
 
 
 @Service
+@RequiredArgsConstructor
 public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> implements PictureService {
 
     @Value("${qiniu.access-key}")
@@ -54,8 +57,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     @Value("${qiniu.domain}")
     private String domain;
 
-    @Autowired
-    private UserFeign userFeign;
+    private final UserFeign userFeign;
+    private final AlbumFeign albumFeign;
 
     private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList(
             "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
@@ -249,6 +252,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
         this.removeByIds(ids);
 
+        albumFeign.clearPhotosFromAlbums(ids);
+
         if (totalFreedSize > 0) {
             // 传负数表示释放配额
             Result<Void> updateResult = userFeign.updateStorage(userId, -totalFreedSize);
@@ -265,7 +270,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         }
         LambdaQueryWrapper<Picture> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.in(Picture::getPictureid, ids)
-                .isNull(Picture::getDeleteTime);
+                .isNull(Picture::getDeleteTime)
+                .orderByDesc(Picture::getShotTime);
 
         return this.list(queryWrapper).stream()
                 .map(this::convertToDTOWithThumbnail)
@@ -285,6 +291,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     private PictureDTO convertToDTOWithThumbnail(Picture picture) {
         PictureDTO dto = new PictureDTO();
         dto.setPictureid(picture.getPictureid());
+        dto.setShotTime(picture.getShotTime());
         String rawUrl = picture.getFileUrl() + "-thumb";
         dto.setPreviewUrl(signUrl(rawUrl));
         return dto;
