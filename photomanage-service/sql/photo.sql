@@ -34,10 +34,11 @@ CREATE TABLE `picture_info` (
   `shot_time` datetime NOT NULL,
   `delete_time` datetime DEFAULT NULL,
   `file_exif` json DEFAULT NULL,
+  `category` varchar(50) DEFAULT '未分类',
   PRIMARY KEY (`pictureid`),
   KEY `idx_userid_delete` (`userid`,`delete_time`),
   KEY `idx_user_active_phtoto` (`userid`,`delete_time`,`shot_time` DESC)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -49,4 +50,4 @@ CREATE TABLE `picture_info` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-05-28  1:08:24
+-- Dump completed on 2026-06-02  0:05:16

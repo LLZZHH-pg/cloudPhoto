@@ -31,4 +31,6 @@ public class Picture {
 
     @TableField(typeHandler = JacksonTypeHandler.class)
     private String fileExif;
+
+    private String category;
 }

@@ -130,14 +130,14 @@ public class AlbumServiceImpl implements AlbumService {
                     Map<Long, PictureDTO> photoMap = feignResult.getData().stream()
                             .collect(Collectors.toMap(PictureDTO::getPictureid, p -> p));
 
-                    // 回填数据给 VO，将找到的第一张图片存入 photos 集合返回（或者你想回填在其他新建的单个cover属性上都可以）
+                    // 回填数据给 VO，将找到的第一张图片存入 photos 集合返回
                     for (AlbumVO vo : voList) {
                         Long firstId = firstPhotoMap.get(vo.getId());
                         if (firstId != null && photoMap.containsKey(firstId)) {
                             PictureDTO firstPic = photoMap.get(firstId);
                             vo.setPhotos(List.of(firstPic));
 
-                            // 新增逻辑：若封面为空，选用首图填补
+                            // 若封面为空，选用首图填补
                             if (vo.getCoverUrl() == null || vo.getCoverUrl().isBlank()) {
                                 vo.setCoverUrl(firstPic.getPreviewUrl());
                             }

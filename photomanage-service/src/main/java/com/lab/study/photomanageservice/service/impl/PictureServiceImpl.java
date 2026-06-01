@@ -22,8 +22,12 @@ import com.qiniu.storage.Region;
 import com.qiniu.storage.UploadManager;
 import com.qiniu.storage.BucketManager;
 import com.qiniu.util.Auth;
+import com.tencentcloudapi.common.Credential;
+import com.tencentcloudapi.tiia.v20190529.TiiaClient;
+import com.tencentcloudapi.tiia.v20190529.models.DetectLabelRequest;
+import com.tencentcloudapi.tiia.v20190529.models.DetectLabelResponse;
+import com.tencentcloudapi.tiia.v20190529.models.DetectLabelItem;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -38,6 +42,7 @@ import com.drew.metadata.exif.ExifSubIFDDirectory;
 
 import java.io.InputStream;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -56,6 +61,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     private String bucket;
     @Value("${qiniu.domain}")
     private String domain;
+
+    @Value("${tencent.cloud.secret-id}")
+    private String tencentSecretId;
+    @Value("${tencent.cloud.secret-key}")
+    private String tencentSecretKey;
+    @Value("${tencent.cloud.region}")
+    private String tencentRegion;
 
     private final UserFeign userFeign;
     private final AlbumFeign albumFeign;
@@ -137,55 +149,45 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         for (MultipartFile file : files) {
             String hash = calculateHash(file);
 
-            // 1. 同一用户传相同哈希文件，当做防重复提交，直接跳过
-            LambdaQueryWrapper<Picture> sameUserQuery = new LambdaQueryWrapper<>();
-            sameUserQuery.eq(Picture::getFileHash, hash).eq(Picture::getUserid, userId);
-            if (this.count(sameUserQuery) > 0) {
-                continue;
-            }
-
-            // 2. 检查全局是否已存在该哈希（他人上传过的），只需取一条
+            // 检查全局是否已存在该哈希，用于秒传数据复用
             LambdaQueryWrapper<Picture> globalQuery = new LambdaQueryWrapper<>();
             globalQuery.eq(Picture::getFileHash, hash).last("LIMIT 1");
             Picture existingPicture = this.getOne(globalQuery);
 
-            String qiniuUrl;
-            String exifJson;
-            LocalDateTime shotTime;
-            String categoryResult;
-
-            if (existingPicture != null) {
-                // =============== 触发秒传 ===============
-                qiniuUrl = existingPicture.getFileUrl();
-                exifJson = existingPicture.getFileExif();
-                shotTime = existingPicture.getShotTime();
-                // 假设前面已经按要求加入了 category 字段
-//                categoryResult = existingPicture.getCategory();
-            } else {
-                // ============ 真实进行上传与识别 ============
-                exifJson = extractExif(file);
-                shotTime = extractShotTime(file);
-                // 上传七牛云
-                qiniuUrl = uploadToQiniu(file);
-                // 调用腾讯云图片分类 (上一个问题的修改)
-//                categoryResult = fetchImageCategory(qiniuUrl);
-            }
-
-            // 3. 构建并保存新数据行到数据库
             Picture picture = new Picture();
             picture.setUserid(userId);
             picture.setFileHash(hash);
-            picture.setFileUrl(qiniuUrl);
-            picture.setFileName(file.getOriginalFilename());
-            picture.setFileSize((int) file.getSize());
-            picture.setShotTime(shotTime);
-            picture.setFileExif(exifJson);
-//            picture.setCategory(categoryResult);
+
+            String qiniuUrl;
+
+            if (existingPicture != null) {
+                // =============== 触发秒传 (数据复用) ===============
+                // 按照要求复制除了 uid、照片id、分类以外的所有数据
+                qiniuUrl = existingPicture.getFileUrl();
+                picture.setFileUrl(qiniuUrl);
+                picture.setFileName(existingPicture.getFileName());
+                picture.setFileSize(existingPicture.getFileSize());
+                picture.setShotTime(existingPicture.getShotTime());
+                picture.setFileExif(existingPicture.getFileExif());
+            } else {
+                // ============ 真实执行上传 ============
+                picture.setFileName(file.getOriginalFilename());
+                picture.setFileSize((int) file.getSize());
+                picture.setShotTime(extractShotTime(file));
+                picture.setFileExif(extractExif(file));
+
+                qiniuUrl = uploadToQiniu(file);
+                picture.setFileUrl(qiniuUrl);
+            }
+
+            // 不论是否触发秒传，都执行腾讯云图像标签识别
+            String categoryResult = fetchImageCategory(qiniuUrl);
+            picture.setCategory(categoryResult);
 
             this.save(picture);
 
-            // 秒传在商业逻辑上依然扣除个人用户容量，记录下来
-            actualUploadedSize += file.getSize();
+            // 累计计入用户的存储配额
+            actualUploadedSize += (existingPicture != null ? existingPicture.getFileSize() : file.getSize());
         }
 
         // 4. 同步更新用户已使用容量
@@ -212,7 +214,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         return pictures.stream().map(picture -> {
             String rawUrl = picture.getFileUrl();
             try {
-                String encodedFileName = URLEncoder.encode(picture.getFileName(), "UTF-8");
+                String encodedFileName = URLEncoder.encode(picture.getFileName(), StandardCharsets.UTF_8);
                 // 拼接样式名 -normal 并配合 attname
                 String downloadUrl = rawUrl + "-normal?attname=" + encodedFileName;
                 return signUrl(downloadUrl);
@@ -278,13 +280,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             }
             String hash = p.getFileHash();
             if (hash != null && !hash.isEmpty()) {
-                // 统计表中是否还有其他行在使用此哈希（因为已经移除了当前行，所以只需判断是否 > 0）
+                // 统计表中是否还有其他行在使用此哈希
                 LambdaQueryWrapper<Picture> countQuery = new LambdaQueryWrapper<>();
                 countQuery.eq(Picture::getFileHash, hash);
                 long leftCount = this.count(countQuery);
 
                 if (leftCount == 0) {
-                    // 没有其他任何人、任何记录引用这个文件了，做七牛云物理清除
+                    // 没有其他记录引用这个文件了，做七牛云物理清除
                     deleteFromQiniu(p.getFileUrl());
                 }
             }
@@ -475,5 +477,32 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         } catch (QiniuException e) {
             System.err.println("删除七牛云文件失败: " + e.getMessage());
         }
+    }
+
+    private String fetchImageCategory(String rawQiniuUrl) {
+        try {
+            // 构造认证信息
+            Credential cred = new Credential(tencentSecretId, tencentSecretKey);
+            // 实例化请求对象
+            TiiaClient client = new TiiaClient(cred, tencentRegion);
+
+            // 让腾讯云通过签名 URL 下载图片进行识别
+            String thumbUrl = rawQiniuUrl + "-thumb";
+            String signedUrl = signUrl(thumbUrl);
+
+            DetectLabelRequest req = new DetectLabelRequest();
+            req.setImageUrl(signedUrl);
+
+            // 调用 DetectLabel 接口
+            DetectLabelResponse resp = client.DetectLabel(req);
+
+            // 获取识别出的标签数组，取置信度最高的名称作为分类结果
+            if (resp.getLabels() != null && resp.getLabels().length > 0) {
+                return resp.getLabels()[0].getName();
+            }
+        } catch (Exception e) {
+            System.err.println("调用腾讯云通用图像分类API失败: " + e.getMessage());
+        }
+        return "未分类"; // 请求异常或未识别出标签时的默认值
     }
 }
