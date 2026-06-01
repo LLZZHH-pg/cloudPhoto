@@ -136,19 +136,42 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         long actualUploadedSize = 0;
         for (MultipartFile file : files) {
             String hash = calculateHash(file);
-            LambdaQueryWrapper<Picture> queryWrapper = new LambdaQueryWrapper<>();
-            queryWrapper.eq(Picture::getFileHash, hash).eq(Picture::getUserid, userId);
-            if (this.count(queryWrapper) > 0) {
+
+            // 1. 同一用户传相同哈希文件，当做防重复提交，直接跳过
+            LambdaQueryWrapper<Picture> sameUserQuery = new LambdaQueryWrapper<>();
+            sameUserQuery.eq(Picture::getFileHash, hash).eq(Picture::getUserid, userId);
+            if (this.count(sameUserQuery) > 0) {
                 continue;
             }
 
-            String exifJson = extractExif(file);
-            LocalDateTime shotTime = extractShotTime(file);
+            // 2. 检查全局是否已存在该哈希（他人上传过的），只需取一条
+            LambdaQueryWrapper<Picture> globalQuery = new LambdaQueryWrapper<>();
+            globalQuery.eq(Picture::getFileHash, hash).last("LIMIT 1");
+            Picture existingPicture = this.getOne(globalQuery);
 
-            // 上传七牛云
-            String qiniuUrl = uploadToQiniu(file);
+            String qiniuUrl;
+            String exifJson;
+            LocalDateTime shotTime;
+            String categoryResult;
 
-            // 保存到数据库
+            if (existingPicture != null) {
+                // =============== 触发秒传 ===============
+                qiniuUrl = existingPicture.getFileUrl();
+                exifJson = existingPicture.getFileExif();
+                shotTime = existingPicture.getShotTime();
+                // 假设前面已经按要求加入了 category 字段
+//                categoryResult = existingPicture.getCategory();
+            } else {
+                // ============ 真实进行上传与识别 ============
+                exifJson = extractExif(file);
+                shotTime = extractShotTime(file);
+                // 上传七牛云
+                qiniuUrl = uploadToQiniu(file);
+                // 调用腾讯云图片分类 (上一个问题的修改)
+//                categoryResult = fetchImageCategory(qiniuUrl);
+            }
+
+            // 3. 构建并保存新数据行到数据库
             Picture picture = new Picture();
             picture.setUserid(userId);
             picture.setFileHash(hash);
@@ -157,10 +180,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             picture.setFileSize((int) file.getSize());
             picture.setShotTime(shotTime);
             picture.setFileExif(exifJson);
+//            picture.setCategory(categoryResult);
 
             this.save(picture);
 
-            // 记录实际产生的新文件大小
+            // 秒传在商业逻辑上依然扣除个人用户容量，记录下来
             actualUploadedSize += file.getSize();
         }
 
@@ -241,19 +265,32 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         List<Picture> pictures = this.listByIds(ids);
         if (pictures.isEmpty()) return;
 
+        // 1. 先将记录从当前用户的数据库彻底移除
+        this.removeByIds(ids);
+        albumFeign.clearPhotosFromAlbums(ids);
+
         long totalFreedSize = 0;
 
+        // 2. 循环判断是否需要真正物理删除
         for (Picture p : pictures) {
-            deleteFromQiniu(p.getFileUrl());
             if (p.getFileSize() != null) {
                 totalFreedSize += p.getFileSize();
             }
+            String hash = p.getFileHash();
+            if (hash != null && !hash.isEmpty()) {
+                // 统计表中是否还有其他行在使用此哈希（因为已经移除了当前行，所以只需判断是否 > 0）
+                LambdaQueryWrapper<Picture> countQuery = new LambdaQueryWrapper<>();
+                countQuery.eq(Picture::getFileHash, hash);
+                long leftCount = this.count(countQuery);
+
+                if (leftCount == 0) {
+                    // 没有其他任何人、任何记录引用这个文件了，做七牛云物理清除
+                    deleteFromQiniu(p.getFileUrl());
+                }
+            }
         }
 
-        this.removeByIds(ids);
-
-        albumFeign.clearPhotosFromAlbums(ids);
-
+        // 3. 将所选图片占用的配额空间退还给用户
         if (totalFreedSize > 0) {
             // 传负数表示释放配额
             Result<Void> updateResult = userFeign.updateStorage(userId, -totalFreedSize);
