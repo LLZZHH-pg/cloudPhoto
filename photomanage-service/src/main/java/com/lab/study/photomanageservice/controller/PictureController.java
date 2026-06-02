@@ -2,6 +2,7 @@ package com.lab.study.photomanageservice.controller;
 
 import com.LAB.study.context.UserContextHolder;
 import com.LAB.study.dto.PictureDTO;
+import com.LAB.study.request.UpdateCategoryRequest;
 import com.LAB.study.vo.PictureVO;
 import com.LAB.study.vo.TimelineVO;
 import com.LAB.study.result.Result;
@@ -77,6 +78,21 @@ public class PictureController {
     @DeleteMapping("/trash/clean")
     public Result<Void> cleanTrash(@RequestBody List<Long> ids) {
         pictureService.cleanTrash(ids, currentUserId());
+        return Result.success();
+    }
+
+    @GetMapping("/categories")
+    public Result<List<String>> getAllCategories() {
+        List<String> categories = pictureService.getAllCategories(currentUserId());
+        return Result.success(categories);
+    }
+
+    @PostMapping("/category/update")
+    public Result<Void> updatePicturesCategory(@RequestBody UpdateCategoryRequest request) {
+        if (request.getIds() == null || request.getIds().isEmpty()) {
+            return Result.error(400, "请选择要修改的照片");
+        }
+        pictureService.updatePicturesCategory(request.getIds(), request.getCategory(), currentUserId());
         return Result.success();
     }
 

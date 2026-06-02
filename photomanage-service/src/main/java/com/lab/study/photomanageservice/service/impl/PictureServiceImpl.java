@@ -340,6 +340,38 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
                 ));
     }
 
+    @Override
+    public List<String> getAllCategories(Integer userId) {
+        LambdaQueryWrapper<Picture> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.select(Picture::getCategory)
+                .eq(Picture::getUserid, userId)
+                .isNotNull(Picture::getCategory)
+                .ne(Picture::getCategory, "")
+                .groupBy(Picture::getCategory); // 获取唯一标签
+
+        return this.listObjs(queryWrapper, Object::toString);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updatePicturesCategory(List<Long> ids, String category, Integer userId) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+
+        if (category != null && category.length() > 50) {
+            throw new IllegalArgumentException("标签长度不能超过50个字符");
+        }
+
+        LambdaUpdateWrapper<Picture> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.in(Picture::getPictureid, ids)
+                .eq(Picture::getUserid, userId)
+                .set(Picture::getCategory, category);
+
+        this.update(updateWrapper);
+    }
+
+    //工具函数
     private PictureVO convertToVOWithThumbnail(Picture picture) {
         PictureVO vo = new PictureVO();
         vo.setPictureid(picture.getPictureid());
@@ -350,7 +382,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         return vo;
     }
 
-    //内部接口用(不用给类别)
+    //内部接口用
     private PictureDTO convertToDTOWithThumbnail(Picture picture) {
         PictureDTO dto = new PictureDTO();
         dto.setPictureid(picture.getPictureid());

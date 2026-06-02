@@ -1,4 +1,4 @@
-package com.LAB.study.dto;
+package com.LAB.study.request;
 
 import lombok.Data;
 

@@ -1,6 +1,10 @@
 package com.lab.study.albummanageservice.service;
 
 import com.LAB.study.dto.*;
+import com.LAB.study.request.AlbumPhotoRequest;
+import com.LAB.study.request.AlbumRequest;
+import com.LAB.study.request.CopyPhotoRequest;
+import com.LAB.study.request.MovePhotoRequest;
 import com.LAB.study.vo.AlbumVO;
 
 import java.util.List;

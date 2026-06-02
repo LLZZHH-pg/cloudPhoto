@@ -2,6 +2,10 @@ package com.lab.study.albummanageservice.controller;
 
 import com.LAB.study.context.UserContextHolder;
 import com.LAB.study.dto.*;
+import com.LAB.study.request.AlbumPhotoRequest;
+import com.LAB.study.request.AlbumRequest;
+import com.LAB.study.request.CopyPhotoRequest;
+import com.LAB.study.request.MovePhotoRequest;
 import com.LAB.study.result.Result;
 import com.lab.study.albummanageservice.service.AlbumService;
 import com.LAB.study.vo.AlbumVO;

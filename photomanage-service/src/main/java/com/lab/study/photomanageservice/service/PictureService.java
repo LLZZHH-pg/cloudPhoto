@@ -28,6 +28,11 @@ public interface PictureService extends IService<Picture> {
 
     void cleanTrash(List<Long> ids, Integer userId);
 
+    List<String> getAllCategories(Integer userId);
+
+    void updatePicturesCategory(List<Long> ids, String category, Integer userId);
+
+
     List<PictureDTO> getPicturesByIds(List<Long> ids);
 
     Map<String, List<PictureDTO>> getPicturesGroupedByCategory(Integer userId, boolean onlyFirst);
