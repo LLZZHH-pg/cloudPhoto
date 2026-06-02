@@ -487,7 +487,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             TiiaClient client = new TiiaClient(cred, tencentRegion);
 
             // 让腾讯云通过签名 URL 下载图片进行识别
-            String thumbUrl = rawQiniuUrl + "-thumb";
+            String thumbUrl = rawQiniuUrl + "-category";
             String signedUrl = signUrl(thumbUrl);
 
             DetectLabelRequest req = new DetectLabelRequest();
@@ -498,7 +498,12 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
             // 获取识别出的标签数组，取置信度最高的名称作为分类结果
             if (resp.getLabels() != null && resp.getLabels().length > 0) {
-                return resp.getLabels()[0].getName();
+                // 取第一条标签的 SecondCategory 作为分类
+                DetectLabelItem item = resp.getLabels()[0];
+                String secondCategory = item.getSecondCategory();
+                if (secondCategory != null && !secondCategory.isBlank()) {
+                    return secondCategory;
+                }
             }
         } catch (Exception e) {
             System.err.println("调用腾讯云通用图像分类API失败: " + e.getMessage());
