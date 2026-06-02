@@ -353,7 +353,18 @@ public class AlbumServiceImpl implements AlbumService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public Map<String, List<PictureDTO>> getPicturesByCategory(Integer userId, boolean onlyFirst) {
+        if (onlyFirst) {
+            return photoFeign.getCategoryFirstGroup(userId).getData();
+        } else {
+            return photoFeign.getCategoryAllGroup(userId).getData();
+        }
+    }
 
+    // ─────────────────────────────────────────────────────────
+    // 内部接口用
+    // ─────────────────────────────────────────────────────────
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void clearPhotosFromAlbums(List<Long> photoIds) {
@@ -378,10 +389,10 @@ public class AlbumServiceImpl implements AlbumService {
         }
     }
 
+
     // ─────────────────────────────────────────────────────────
     // 私有工具方法
     // ─────────────────────────────────────────────────────────
-
     /**
      * 查询影集，并校验是否属于该用户（权限验证）
      */

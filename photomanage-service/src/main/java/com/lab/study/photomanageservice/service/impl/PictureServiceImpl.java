@@ -224,6 +224,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         }).collect(Collectors.toList());
     }
 
+    //软删除
     @Override
     public void deletePictures(List<Long> ids, Integer userId) {
         if (ids == null || ids.isEmpty()) return;
@@ -302,6 +303,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         }
     }
 
+    //内部接口专用
     @Override
     public List<PictureDTO> getPicturesByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
@@ -317,6 +319,27 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public Map<String, List<PictureDTO>> getPicturesGroupedByCategory(Integer userId, boolean onlyFirst) {
+        List<Picture> pictures;
+
+        if (onlyFirst) {
+            pictures = baseMapper.selectFirstPicturePerCategory(userId);
+        } else {
+            // 请求全部：查全部再走内存分组
+            pictures = this.list(new LambdaQueryWrapper<Picture>()
+                    .eq(Picture::getUserid, userId)
+                    .isNull(Picture::getDeleteTime)
+                    .orderByDesc(Picture::getShotTime));
+        }
+
+        return pictures.stream()
+                .map(this::convertToDTOWithThumbnail)
+                .collect(Collectors.groupingBy(
+                        p -> p.getCategory() == null ? "未分类" : p.getCategory()
+                ));
+    }
+
     private PictureVO convertToVOWithThumbnail(Picture picture) {
         PictureVO vo = new PictureVO();
         vo.setPictureid(picture.getPictureid());
@@ -327,10 +350,12 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         return vo;
     }
 
+    //内部接口用(不用给类别)
     private PictureDTO convertToDTOWithThumbnail(Picture picture) {
         PictureDTO dto = new PictureDTO();
         dto.setPictureid(picture.getPictureid());
         dto.setShotTime(picture.getShotTime());
+        dto.setCategory(picture.getCategory());
         String rawUrl = picture.getFileUrl() + "-thumb";
         dto.setPreviewUrl(signUrl(rawUrl));
         return dto;

@@ -1,12 +1,10 @@
 package com.lab.study.albummanageservice.service;
 
-import com.LAB.study.dto.AlbumPhotoRequest;
-import com.LAB.study.dto.AlbumRequest;
-import com.LAB.study.dto.CopyPhotoRequest;
-import com.LAB.study.dto.MovePhotoRequest;
+import com.LAB.study.dto.*;
 import com.LAB.study.vo.AlbumVO;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 影集管理 Service 接口
@@ -95,6 +93,8 @@ public interface AlbumService {
      * @return 公开影集列表
      */
     List<AlbumVO> listPublicAlbums();
+
+    Map<String, List<PictureDTO>> getPicturesByCategory(Integer userId, boolean onlyFirst);
 
     void clearPhotosFromAlbums(List<Long> photoIds);
 }

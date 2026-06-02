@@ -8,6 +8,7 @@ import com.lab.study.photomanageservice.entity.Picture;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 public interface PictureService extends IService<Picture> {
 
@@ -28,4 +29,6 @@ public interface PictureService extends IService<Picture> {
     void cleanTrash(List<Long> ids, Integer userId);
 
     List<PictureDTO> getPicturesByIds(List<Long> ids);
+
+    Map<String, List<PictureDTO>> getPicturesGroupedByCategory(Integer userId, boolean onlyFirst);
 }

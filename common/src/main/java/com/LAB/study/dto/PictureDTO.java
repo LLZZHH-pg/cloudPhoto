@@ -9,4 +9,5 @@ public class PictureDTO {
     private Long pictureid;
     private String previewUrl;
     private LocalDateTime shotTime;
+    private String category;
 }

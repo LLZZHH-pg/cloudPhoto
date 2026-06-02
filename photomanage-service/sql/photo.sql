@@ -37,8 +37,9 @@ CREATE TABLE `picture_info` (
   `category` varchar(50) DEFAULT '未分类',
   PRIMARY KEY (`pictureid`),
   KEY `idx_userid_delete` (`userid`,`delete_time`),
-  KEY `idx_user_active_phtoto` (`userid`,`delete_time`,`shot_time` DESC)
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `idx_user_active_phtoto` (`userid`,`delete_time`,`shot_time` DESC),
+  KEY `idx_user_del_cat_time` (`userid`,`delete_time`,`category`,`shot_time` DESC)
+) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -50,4 +51,4 @@ CREATE TABLE `picture_info` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-06-02  0:05:16
+-- Dump completed on 2026-06-02 16:37:06

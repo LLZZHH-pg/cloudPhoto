@@ -1,17 +1,15 @@
 package com.lab.study.albummanageservice.controller;
 
 import com.LAB.study.context.UserContextHolder;
+import com.LAB.study.dto.*;
 import com.LAB.study.result.Result;
-import com.LAB.study.dto.AlbumPhotoRequest;
-import com.LAB.study.dto.AlbumRequest;
-import com.LAB.study.dto.CopyPhotoRequest;
-import com.LAB.study.dto.MovePhotoRequest;
 import com.lab.study.albummanageservice.service.AlbumService;
 import com.LAB.study.vo.AlbumVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 影集管理 Controller
@@ -137,7 +135,27 @@ public class AlbumController {
         return Result.success(list);
     }
 
+    // ─────────────────────────────────────────────────────────
+    // 查询我的照片 - 按分类分组 (首张图片)
+    // ─────────────────────────────────────────────────────────
+    @GetMapping("/photos/category/first")
+    public Result<Map<String, List<PictureDTO>>> getPhotosGroupedByCategoryFirst() {
+        Map<String, List<PictureDTO>> result = albumService.getPicturesByCategory(currentUserId(), true);
+        return Result.success(result);
+    }
+    // ─────────────────────────────────────────────────────────
+    // 查询我的照片 - 按分类分组
+    // ─────────────────────────────────────────────────────────
+    @GetMapping("/photos/category/all")
+    public Result<Map<String, List<PictureDTO>>> getPhotosGroupedByCategoryAll() {
+        Map<String, List<PictureDTO>> result = albumService.getPicturesByCategory(currentUserId(), false);
+        return Result.success(result);
+    }
+
+
+    // ─────────────────────────────────────────────────────────
     // 内部接口
+    // ─────────────────────────────────────────────────────────
     @DeleteMapping("/internal/photos/clear")
     public Result<Void> clearPhotosFromAlbums(@RequestParam("photoIds") List<Long> photoIds) {
         if (photoIds != null && !photoIds.isEmpty()) {

@@ -11,4 +11,5 @@ public class PictureVO {
     private LocalDateTime deleteTime;
     private String previewUrl;
     private String fileExif;
+    private String category;
 }

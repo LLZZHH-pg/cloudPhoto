@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/media")
@@ -86,5 +87,18 @@ public class PictureController {
         return Result.success(list);
     }
 
+    @GetMapping("/internal/category/first")
+    public Result<Map<String, List<PictureDTO>>> getCategoryFirstGroup(@RequestParam("userId") Integer userId) {
+        // 按分类聚合，只拿第一条
+        Map<String, List<PictureDTO>> result = pictureService.getPicturesGroupedByCategory(userId, true);
+        return Result.success(result);
+    }
+
+    @GetMapping("/internal/category/all")
+    public Result<Map<String, List<PictureDTO>>> getCategoryAllGroup(@RequestParam("userId") Integer userId) {
+        // 按分类聚合，拿该分类下所有图片
+        Map<String, List<PictureDTO>> result = pictureService.getPicturesGroupedByCategory(userId, false);
+        return Result.success(result);
+    }
 
 }
