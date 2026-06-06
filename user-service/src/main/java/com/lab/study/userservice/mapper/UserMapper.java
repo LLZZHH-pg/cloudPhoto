@@ -25,12 +25,12 @@ public interface UserMapper extends BaseMapper<User> {
     int releaseStorage(@Param("userId") Integer userId, @Param("sizeDelta") Long sizeDelta);
 
     /**     * 查询用户当前的剩余容量     * 逻辑：剩余容量 = (生效计划容量 OR 默认容量) - 已采集容量     */
-    @Select("SELECT (IF(p.statues = 'enable', p.storage, 1073741824) - u.usedstorage) as remaining " +
+    @Select("SELECT IF(p.statues = 'enable', p.storage, 1073741824) as total " +
             "FROM user_info u " +
             "LEFT JOIN user_plan up ON u.userid = up.userid " +
             "LEFT JOIN plan_info p ON up.planid = p.planid " +
             "WHERE u.userid = #{userId}")
-    Long getRemainingStorage(@Param("userId") Integer userId);
+    Long getTotalStorage(@Param("userId") Integer userId);
 
     /**     * 查询回收站有效期（天）     * 逻辑：如果 plan 状态为 'enable'，使用 p.recycle；否则使用默认值 30     */
     @Select("SELECT IF(p.statues = 'enable', p.recycle, 30) " +

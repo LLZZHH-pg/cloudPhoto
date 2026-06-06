@@ -2,10 +2,15 @@ package com.lab.study.userservice.service.impl;
 
 import com.LAB.study.dto.RegisterDTO;
 import com.LAB.study.dto.UserInfoDTO;
+import com.LAB.study.vo.PlanVO;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.lab.study.userservice.entity.Plan;
 import com.lab.study.userservice.entity.User;
+import com.lab.study.userservice.entity.UserPlan;
+import com.lab.study.userservice.mapper.PlanMapper;
 import com.lab.study.userservice.mapper.UserMapper;
+import com.lab.study.userservice.mapper.UserPlanMapper;
 import com.lab.study.userservice.service.UserService;
 import com.lab.study.userservice.utils.JwtUtil;
 import io.jsonwebtoken.security.Keys;
@@ -21,10 +26,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -37,6 +45,10 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private PlanMapper planMapper;
+    @Autowired
+    private UserPlanMapper userPlanMapper;
 
     @Autowired
     private StringRedisTemplate redisTemplate;
@@ -144,7 +156,6 @@ public class UserServiceImpl implements UserService {
             checkUnique(User::getEml, eml, "邮箱已存在");
         }
 
-        // 赋值与插入
         User user = new User();
         user.setNam(nam);
         user.setPas(passwordEncoder.encode(pas));
@@ -153,6 +164,14 @@ public class UserServiceImpl implements UserService {
         user.setUsedstorage(0L);
 
         userMapper.insert(user);
+
+        // 默认订阅 planid 为 1 的免费套餐
+        UserPlan defaultPlan = new UserPlan();
+        defaultPlan.setUserid(user.getUserId());
+        defaultPlan.setPlanid(1);
+        defaultPlan.setCreatedAt(LocalDateTime.now());
+
+        userPlanMapper.insert(defaultPlan);
     }
 
     @Override
@@ -214,20 +233,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserInfoDTO getUserById(Integer userId) {
-        User user = userMapper.selectById(userId);
-        if (user == null) return null;
-
-        UserInfoDTO dto = new UserInfoDTO();
-        BeanUtils.copyProperties(user, dto);
-
-        Long total = userMapper.getRemainingStorage(userId);
-        dto.setTotalstorage(total);
-
-        return dto;
-    }
-
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateUsedStorage(Integer userId, Long sizeDelta) {
         if (sizeDelta == 0) {
@@ -235,13 +240,13 @@ public class UserServiceImpl implements UserService {
         }
 
         if (sizeDelta > 0) {
-            // 需要增加使用容量时（如上传照片）
+            // 增加容量
             int updated = userMapper.deductStorage(userId, sizeDelta);
             if (updated == 0) {
                 throw new RuntimeException("操作失败，您的存储空间不足，请清理后重试");
             }
         } else {
-            // 需要释放使用容量时（如彻底清理回收站，传入负数）
+            // 释放容量
             userMapper.releaseStorage(userId, Math.abs(sizeDelta));
         }
     }
@@ -251,16 +256,65 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException(msg);
         }
     }
+
     private void checkUniqueExceptSelf(SFunction<User, ?> column, String value, Integer excludeUserId, String msg) {
         if (StringUtils.hasText(value)) {
             long count = userMapper.selectCount(Wrappers.<User>lambdaQuery()
                     .eq(column, value)
-                    .ne(User::getUserId, excludeUserId)); // 核心：增加“不等于当前用户ID”的条件
+                    .ne(User::getUserId, excludeUserId));
             if (count > 0) {
                 throw new RuntimeException(msg);
             }
         }
     }
 
+    @Override
+    public List<PlanVO> getAllPlans() {
+        List<Plan> plans = planMapper.selectList(Wrappers.<Plan>lambdaQuery()
+                .eq(Plan::getStatues, "enable"));
+        return plans.stream().map(p -> {
+            PlanVO vo = new PlanVO();
+            BeanUtils.copyProperties(p, vo);
+            return vo;
+        }).collect(Collectors.toList());
+    }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void subscribePlan(Integer userId, Integer planId) {
+        // 检查套餐是否存在且启用
+        Plan plan = planMapper.selectById(planId);
+        if (plan == null || !"enable".equals(plan.getStatues())) {
+            throw new RuntimeException("该套餐目前不可用");
+        }
+
+        // 修改或插入关联记录（假设一个用户只能有一个激活套餐）
+        UserPlan up = userPlanMapper.selectOne(Wrappers.<UserPlan>lambdaQuery().eq(UserPlan::getUserid, userId));
+        if (up == null) {
+            up = new UserPlan();
+            up.setUserid(userId);
+            up.setPlanid(planId);
+            up.setCreatedAt(LocalDateTime.now());
+            userPlanMapper.insert(up);
+        } else {
+            up.setPlanid(planId);
+            up.setCreatedAt(LocalDateTime.now());
+            userPlanMapper.updateById(up);
+        }
+    }
+
+
+    @Override
+    public UserInfoDTO getUserById(Integer userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) return null;
+
+        UserInfoDTO dto = new UserInfoDTO();
+        BeanUtils.copyProperties(user, dto);
+
+        Long total = userMapper.getTotalStorage(userId);
+        dto.setTotalstorage(total);
+
+        return dto;
+    }
 }

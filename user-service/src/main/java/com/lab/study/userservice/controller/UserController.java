@@ -5,11 +5,13 @@ import com.LAB.study.dto.LoginDTO;
 import com.LAB.study.dto.RegisterDTO;
 import com.LAB.study.dto.UserInfoDTO;
 import com.LAB.study.result.Result;
+import com.LAB.study.vo.PlanVO;
 import com.lab.study.userservice.entity.User;
 import com.lab.study.userservice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -52,15 +54,6 @@ public class UserController {
             return Result.error("用户不存在");
         }
     }
-    @GetMapping("/internal/info/{id}")
-    public Result<UserInfoDTO> getUserInfo(@PathVariable Integer id) {
-        UserInfoDTO dto = userService.getUserById(id);
-        if (dto != null) {
-            return Result.success(dto);
-        } else {
-            return Result.error("用户不存在");
-        }
-    }
 
     @PostMapping("/info/update")
     public Result updateUserInfo(@RequestBody RegisterDTO dto) {
@@ -69,6 +62,34 @@ public class UserController {
             return Result.success("修改成功");
         } catch (Exception e) {
             return Result.error(e.getMessage());
+        }
+    }
+
+    @GetMapping("/plans/list")
+    public Result<List<PlanVO>> getPlans() {
+        currentUserId();
+        return Result.success(userService.getAllPlans());
+    }
+
+    @PostMapping("/plans/subscribe")
+    public Result subscribe(@RequestBody Map<String, Integer> params) {
+        Integer planId = params.get("planId");
+        try {
+            userService.subscribePlan(currentUserId(), planId);
+            return Result.success("订阅成功");
+        } catch (Exception e) {
+            return Result.error("订阅失败");
+        }
+    }
+
+
+    @GetMapping("/internal/info/{id}")
+    public Result<UserInfoDTO> getUserInfo(@PathVariable Integer id) {
+        UserInfoDTO dto = userService.getUserById(id);
+        if (dto != null) {
+            return Result.success(dto);
+        } else {
+            return Result.error("用户不存在");
         }
     }
 

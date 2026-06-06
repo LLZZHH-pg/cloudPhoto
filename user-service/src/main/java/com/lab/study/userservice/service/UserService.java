@@ -2,7 +2,9 @@ package com.lab.study.userservice.service;
 
 import com.LAB.study.dto.RegisterDTO;
 import com.LAB.study.dto.UserInfoDTO;
+import com.LAB.study.vo.PlanVO;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -20,4 +22,8 @@ public interface UserService {
     void updateUsedStorage(Integer userId, Long sizeDelta);
 
     void updateRegister(RegisterDTO dto, Integer integer);
+
+    List<PlanVO> getAllPlans();
+
+    void subscribePlan(Integer userId, Integer planId);
 }
