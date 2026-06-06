@@ -2,6 +2,8 @@ package com.lab.study.userservice.service.impl;
 
 import com.LAB.study.dto.RegisterDTO;
 import com.LAB.study.dto.UserInfoDTO;
+import com.LAB.study.request.PlanRequest;
+import com.LAB.study.request.UserStatusRequest;
 import com.LAB.study.vo.PlanVO;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
@@ -284,6 +286,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public List<PlanVO> getAllPlansForAuth() {
+        List<Plan> plans = planMapper.selectList(null);
+        return plans.stream().map(p -> {
+            PlanVO vo = new PlanVO();
+            BeanUtils.copyProperties(p, vo);
+            return vo;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void subscribePlan(Integer userId, Integer planId) {
         // 检查套餐是否存在且启用
@@ -307,7 +319,41 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    //管理员
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void saveOrUpdatePlan(PlanRequest request) {
+        Plan plan = new Plan();
+        BeanUtils.copyProperties(request, plan);
+        if (plan.getPlanid() == null) {
+            planMapper.insert(plan);
+        } else {
+            planMapper.updateById(plan);
+        }
+    }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deletePlan(Integer planId) {
+        if (planId == 1) throw new RuntimeException("默认免费套餐不能删除");
+        planMapper.deleteById(planId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateUserStatus(UserStatusRequest request) {
+        String status = request.getStatus();
+        if (!List.of("enable", "disable", "auth").contains(status)) {
+            throw new RuntimeException("非法的状态值");
+        }
+        User user = new User();
+        user.setUserId(request.getUserId());
+        user.setStatues(status);
+        userMapper.updateById(user);
+    }
+
+
+    //内部
     @Override
     public UserInfoDTO getUserById(Integer userId) {
         User user = userMapper.selectById(userId);

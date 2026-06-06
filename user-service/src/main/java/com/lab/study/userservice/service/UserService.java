@@ -2,6 +2,8 @@ package com.lab.study.userservice.service;
 
 import com.LAB.study.dto.RegisterDTO;
 import com.LAB.study.dto.UserInfoDTO;
+import com.LAB.study.request.PlanRequest;
+import com.LAB.study.request.UserStatusRequest;
 import com.LAB.study.vo.PlanVO;
 
 import java.util.List;
@@ -25,5 +27,14 @@ public interface UserService {
 
     List<PlanVO> getAllPlans();
 
+    List<PlanVO> getAllPlansForAuth();
+
     void subscribePlan(Integer userId, Integer planId);
+
+    //管理员
+    void saveOrUpdatePlan(PlanRequest request);
+
+    void deletePlan(Integer planId);
+
+    void updateUserStatus(UserStatusRequest request);
 }

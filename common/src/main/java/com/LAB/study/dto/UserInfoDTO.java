@@ -9,6 +9,7 @@ public class UserInfoDTO {
     private String tel;
     private String eml;
     private Long usedstorage;
+    private String statues;
 
     //额外查询
     private Long totalstorage;

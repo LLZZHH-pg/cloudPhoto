@@ -4,6 +4,8 @@ import com.LAB.study.context.UserContextHolder;
 import com.LAB.study.dto.LoginDTO;
 import com.LAB.study.dto.RegisterDTO;
 import com.LAB.study.dto.UserInfoDTO;
+import com.LAB.study.request.PlanRequest;
+import com.LAB.study.request.UserStatusRequest;
 import com.LAB.study.result.Result;
 import com.LAB.study.vo.PlanVO;
 import com.lab.study.userservice.entity.User;
@@ -82,7 +84,61 @@ public class UserController {
         }
     }
 
+    //管理员
+    @GetMapping("/auth/plans/list")
+    public Result<List<PlanVO>> getPlansForAuth() {
+        try {
+            checkAdminAuth();
+            List<PlanVO> list = userService.getAllPlansForAuth();
+            return Result.success(list);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 
+    @PostMapping("/auth/plans/save")
+    public Result savePlan(@RequestBody PlanRequest request) {
+        try {
+            checkAdminAuth();
+            userService.saveOrUpdatePlan(request);
+            return Result.success("操作成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/auth/plans/delete")
+    public Result deletePlan(@RequestBody PlanRequest request) {
+        try {
+            checkAdminAuth();
+            if (request.getPlanid() == null) return Result.error("请提供planid");
+            userService.deletePlan(request.getPlanid());
+            return Result.success("删除成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/auth/user/status")
+    public Result updateUserStatus(@RequestBody UserStatusRequest request) {
+        try {
+            checkAdminAuth();
+            userService.updateUserStatus(request);
+            return Result.success("状态修改成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    private void checkAdminAuth() {
+        UserInfoDTO user = userService.getUserById(currentUserId());
+        if (user == null || !"auth".equals(user.getStatues())) {
+            throw new RuntimeException("无权访问管理员功能");
+        }
+    }
+
+
+    //内部
     @GetMapping("/internal/info/{id}")
     public Result<UserInfoDTO> getUserInfo(@PathVariable Integer id) {
         UserInfoDTO dto = userService.getUserById(id);
