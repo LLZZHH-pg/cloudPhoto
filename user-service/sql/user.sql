@@ -25,7 +25,7 @@ DROP TABLE IF EXISTS `plan_info`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `plan_info` (
-  `planid` int NOT NULL,
+  `planid` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) COLLATE utf8mb4_unicode_ci NOT NULL,
   `storage` bigint NOT NULL DEFAULT '1073741824',
   `recycle` int NOT NULL DEFAULT '30',
@@ -34,8 +34,18 @@ CREATE TABLE `plan_info` (
   PRIMARY KEY (`planid`),
   UNIQUE KEY `name_UNIQUE` (`name`),
   UNIQUE KEY `planid_UNIQUE` (`planid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `plan_info`
+--
+
+LOCK TABLES `plan_info` WRITE;
+/*!40000 ALTER TABLE `plan_info` DISABLE KEYS */;
+INSERT INTO `plan_info` VALUES (1,'base',1073741824,30,0,'enable'),(2,'bbb',2147483648,60,50,'enable'),(3,'ccc',2147483648,30,30,'disable'),(4,'bbbbbb',10737418240,90,100,'enable');
+/*!40000 ALTER TABLE `plan_info` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `user_info`
@@ -56,8 +66,18 @@ CREATE TABLE `user_info` (
   UNIQUE KEY `tel_UNIQUE` (`tel`) USING BTREE,
   UNIQUE KEY `userid_UNIQUE` (`userid`),
   UNIQUE KEY `username_UNIQUE` (`nam`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_info`
+--
+
+LOCK TABLES `user_info` WRITE;
+/*!40000 ALTER TABLE `user_info` DISABLE KEYS */;
+INSERT INTO `user_info` VALUES (4,'ddddd','$2a$10$yudvxfovKg0G0UM2qg/Vmugl6RYYBFOim490xYDInx90WXleOqIua','13800138001','alice@example.com',50463468,'auth'),(5,'','$2a$10$o3gXxw.qbt55QDfSTCD3qOvtml5StUZBm88ueCipRQ0gLK/ibW0WK','12345678901','',0,'enable'),(6,'ddd','$2a$10$hE7h5fhM3Y1F2TCCQvbYrOhJYCZYl0j7.WGJcv3r8H.x9k2zd./Pq','13800138002','',1995910,'enable'),(7,'abc','$2a$10$Aukj.bA5MI0vFouW3TnQz.7N5uOsh1X1yB.PLnw6r39xaIBdnBWeK','13800138003','al@example.com',0,'enable');
+/*!40000 ALTER TABLE `user_info` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `user_plan`
@@ -77,8 +97,18 @@ CREATE TABLE `user_plan` (
   KEY `planid_idx` (`planid`),
   CONSTRAINT `planid` FOREIGN KEY (`planid`) REFERENCES `plan_info` (`planid`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `userid` FOREIGN KEY (`userid`) REFERENCES `user_info` (`userid`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_plan`
+--
+
+LOCK TABLES `user_plan` WRITE;
+/*!40000 ALTER TABLE `user_plan` DISABLE KEYS */;
+INSERT INTO `user_plan` VALUES (1,4,2,'2026-06-07 02:14:16'),(2,5,1,NULL),(3,6,2,NULL),(4,7,1,'2026-06-07 00:44:00');
+/*!40000 ALTER TABLE `user_plan` ENABLE KEYS */;
+UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -89,4 +119,4 @@ CREATE TABLE `user_plan` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-06-06 15:54:11
+-- Dump completed on 2026-06-07  2:29:44
