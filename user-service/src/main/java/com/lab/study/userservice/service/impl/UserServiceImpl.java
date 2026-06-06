@@ -80,6 +80,10 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("该账号不存在，请检查输入或先注册");
         }
 
+        if ("disable".equalsIgnoreCase(user.getStatues())) {
+            throw new RuntimeException("该账号已被禁用，请联系管理员");
+        }
+
         // 校验密码
         if (!passwordEncoder.matches(password, user.getPas())) {
             throw new RuntimeException("密码错误，请重试");

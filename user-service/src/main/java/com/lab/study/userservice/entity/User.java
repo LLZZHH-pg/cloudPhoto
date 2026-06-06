@@ -21,4 +21,5 @@ public class User {
     private String eml; // 对应 eml
 
     private Long usedstorage; // 对应 usedstorage
+    private String statues;
 }
