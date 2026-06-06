@@ -239,13 +239,45 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
     @Override
     public List<PictureVO> getTrashList(Integer userId) {
+        // 1. 调用 UserFeign 获取用户信息，提取回收站有效期天数
+        Result<UserInfoDTO> userInfoResult = userFeign.getUserInfo(userId);
+        int totalLimitDays = 30; // 默认 30 天
+        if (userInfoResult != null && userInfoResult.getCode() == 200 && userInfoResult.getData() != null) {
+            Integer userRecycleDays = userInfoResult.getData().getRecycledays();
+            if (userRecycleDays != null) {
+                totalLimitDays = userRecycleDays;
+            }
+        }
+
+        // 2. 查询回收站中的图片列表
         LambdaQueryWrapper<Picture> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Picture::getUserid, userId)
                 .isNotNull(Picture::getDeleteTime)
-                .orderByAsc(Picture::getDeleteTime);
+                .orderByDesc(Picture::getDeleteTime); // 按删除时间倒览
 
-        return this.list(queryWrapper).stream()
-                .map(this::convertToVOWithThumbnail)
+        List<Picture> pictures = this.list(queryWrapper);
+
+        // 3. 计算倒计时并转换为 VO
+        LocalDateTime now = LocalDateTime.now();
+        final int limit = totalLimitDays;
+
+        return pictures.stream()
+                .map(picture -> {
+                    // 调用原有的转换方法
+                    PictureVO vo = convertToVOWithThumbnail(picture);
+
+                    // 计算剩余天数
+                    if (picture.getDeleteTime() != null) {
+                        // 已过去的天数
+                        long daysPassed = java.time.temporal.ChronoUnit.DAYS.between(picture.getDeleteTime(), now);
+                        // 剩余天数 = 总期限 - 已过去天数
+                        int remaining = (int) (limit - daysPassed);
+                        // 赋值给 PictureVO 中的 recycleDays 变量，最小为 0
+                        vo.setRecycleDays(Math.max(0, remaining));
+                    }
+
+                    return vo;
+                })
                 .collect(Collectors.toList());
     }
 

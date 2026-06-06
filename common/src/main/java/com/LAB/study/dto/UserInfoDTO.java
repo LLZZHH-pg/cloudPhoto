@@ -8,6 +8,10 @@ public class UserInfoDTO {
     private String nam;
     private String tel;
     private String eml;
-    private Long totalstorage;
     private Long usedstorage;
+
+    //额外查询
+    private Long totalstorage;
+    private Integer recycledays;
+
 }

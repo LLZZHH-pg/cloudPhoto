@@ -12,4 +12,6 @@ public class PictureVO {
     private String previewUrl;
     private String fileExif;
     private String category;
+
+    private Integer recycleDays;
 }

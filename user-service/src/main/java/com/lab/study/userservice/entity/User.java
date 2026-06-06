@@ -21,5 +21,4 @@ public class User {
     private String eml; // 对应 eml
 
     private Long usedstorage; // 对应 usedstorage
-    private Long totalstorage; // 对应 totalstorage
 }

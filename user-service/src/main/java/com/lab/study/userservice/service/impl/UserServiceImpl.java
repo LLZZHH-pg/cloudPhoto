@@ -2,7 +2,6 @@ package com.lab.study.userservice.service.impl;
 
 import com.LAB.study.dto.RegisterDTO;
 import com.LAB.study.dto.UserInfoDTO;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.lab.study.userservice.entity.User;
@@ -151,8 +150,6 @@ public class UserServiceImpl implements UserService {
         user.setPas(passwordEncoder.encode(pas));
         user.setTel(tel);
         user.setEml(eml);
-        // 默认配额 1GB
-        user.setTotalstorage(1024L * 1024 * 1024);
         user.setUsedstorage(0L);
 
         userMapper.insert(user);
@@ -219,7 +216,15 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserInfoDTO getUserById(Integer userId) {
         User user = userMapper.selectById(userId);
-        return convertToDTO(user);
+        if (user == null) return null;
+
+        UserInfoDTO dto = new UserInfoDTO();
+        BeanUtils.copyProperties(user, dto);
+
+        Long total = userMapper.getRemainingStorage(userId);
+        dto.setTotalstorage(total);
+
+        return dto;
     }
 
     @Override
@@ -239,15 +244,6 @@ public class UserServiceImpl implements UserService {
             // 需要释放使用容量时（如彻底清理回收站，传入负数）
             userMapper.releaseStorage(userId, Math.abs(sizeDelta));
         }
-    }
-
-    private UserInfoDTO convertToDTO(User user) {
-        if (user == null) {
-            return null;
-        }
-        UserInfoDTO dto = new UserInfoDTO();
-        BeanUtils.copyProperties(user, dto);
-        return dto;
     }
 
     private void checkUnique(SFunction<User, ?> column, String value, String msg) {

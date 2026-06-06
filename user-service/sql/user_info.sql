@@ -72,8 +72,12 @@ CREATE TABLE `user_plan` (
   `planid` int NOT NULL,
   `created_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id_UNIQUE` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  UNIQUE KEY `id_UNIQUE` (`id`),
+  KEY `userid_idx` (`userid`),
+  KEY `planid_idx` (`planid`),
+  CONSTRAINT `planid` FOREIGN KEY (`planid`) REFERENCES `plan_info` (`planid`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `userid` FOREIGN KEY (`userid`) REFERENCES `user_info` (`userid`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -85,4 +89,4 @@ CREATE TABLE `user_plan` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-06-06 15:35:57
+-- Dump completed on 2026-06-06 15:54:11
