@@ -313,7 +313,9 @@ public class UserServiceImpl implements UserService {
         BeanUtils.copyProperties(user, dto);
 
         Long total = userMapper.getTotalStorage(userId);
+        Integer recycle = userMapper.getRecycleDays(userId);
         dto.setTotalstorage(total);
+        dto.setRecycledays(recycle);
 
         return dto;
     }
