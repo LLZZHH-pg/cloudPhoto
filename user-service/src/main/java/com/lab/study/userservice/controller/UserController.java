@@ -85,6 +85,16 @@ public class UserController {
     }
 
     //管理员
+    @PostMapping("/auth/login")
+    public Result loginForAuth(@RequestBody LoginDTO dto) {
+        try {
+            Map<String, Object> data = userService.loginForAuth(dto.getAcc(), dto.getPas());
+            return Result.success(data);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
     @GetMapping("/auth/plans/list")
     public Result<List<PlanVO>> getPlansForAuth() {
         try {

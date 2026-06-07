@@ -17,6 +17,8 @@ public interface UserService {
 
     Map<String, Object> login(String account, String password);
 
+    Map<String, Object> loginForAuth(String account, String password);
+
     void register(RegisterDTO dto);
 
     UserInfoDTO getUserById(Integer userId);

@@ -45,6 +45,7 @@ public class JwtAuthenticationGlobalFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_PATHS = Arrays.asList(
             "/user/register",
             "/user/login",
+            "/user/auth/login",
             "/album/public"
     );
 

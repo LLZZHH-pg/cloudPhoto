@@ -321,14 +321,84 @@ public class UserServiceImpl implements UserService {
 
     //管理员
     @Override
+    public Map<String, Object> loginForAuth(String account, String password) {
+        if (account == null || account.trim().isEmpty()) {
+            throw new RuntimeException("登录账号不能为空");
+        }
+        if (password == null || password.isEmpty()) {
+            throw new RuntimeException("密码不能为空");
+        }
+
+        // 判断账号类型 (邮箱 / 手机号 / 用户名)
+        User user = userMapper.selectOne(Wrappers.<User>lambdaQuery()
+                .eq(account.contains("@"), User::getEml, account)
+                .eq(PHONE_PATTERN.matcher(account).matches(), User::getTel, account)
+                .eq(!account.contains("@") && !PHONE_PATTERN.matcher(account).matches(), User::getNam, account));
+
+        if (user == null) {
+            throw new RuntimeException("该账号不存在，请检查输入或先注册");
+        }
+
+        if (!"auth".equalsIgnoreCase(user.getStatues())) {
+            throw new RuntimeException("非管理员账户");
+        }
+
+        // 校验密码
+        if (!passwordEncoder.matches(password, user.getPas())) {
+            throw new RuntimeException("密码错误，请重试");
+        }
+
+        // 1. 生成唯一的 jti
+        String jti = java.util.UUID.randomUUID().toString();
+
+        // 2. 构造专业的 JwtUserDTO
+        com.LAB.study.dto.JwtUserDTO jwtUser = new com.LAB.study.dto.JwtUserDTO();
+        jwtUser.setUid(user.getUserId());
+
+        // 3. 构建 Claims
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("user", jwtUser);
+        claims.put("jti", jti);
+
+        // 4. 生成 JWT
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        String token = JwtUtil.createJWT(key, "cloud-photo-key", jwtExpiration, claims);
+
+        // 5. 存入 Redis 并返回
+        String redisKey = "auth:token:" + jti;
+        redisTemplate.opsForValue().set(redisKey, token, jwtExpiration, TimeUnit.MILLISECONDS);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("token", token);
+        result.put("userInfo", user);
+        return result;
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveOrUpdatePlan(PlanRequest request) {
-        Plan plan = new Plan();
-        BeanUtils.copyProperties(request, plan);
-        if (plan.getPlanid() == null) {
+        if (request.getPlanid() == null) {
+            // 校验必填项不允许为空
+            if (!StringUtils.hasText(request.getName()) ||
+                    request.getStorage() == null ||
+                    request.getRecycle() == null ||
+                    request.getPrice() == null ||
+                    request.getStatues() == null) {
+                throw new RuntimeException("属性值不能为空");
+            }
+
+            Plan plan = new Plan();
+            BeanUtils.copyProperties(request, plan);
             planMapper.insert(plan);
         } else {
-            planMapper.updateById(plan);
+            // 直接构造 Plan 对象，MyBatis-Plus 的 updateById 默认只更新非 null 字段
+            Plan plan = new Plan();
+            BeanUtils.copyProperties(request, plan);
+
+            int rows = planMapper.updateById(plan);
+            if (rows == 0) {
+                throw new RuntimeException("未找到对应套餐");
+            }
         }
     }
 
