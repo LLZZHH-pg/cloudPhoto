@@ -159,5 +159,11 @@ public class AlbumController {
         return Result.success();
     }
 
+    @PostMapping("/internal/photos/updatestate")
+    public Result<Void> syncPhotoStatus(@RequestBody List<Long> photoIds, @RequestParam("isDeleted") Integer status) {
+        albumService.updateAlbumPhotoStatus(photoIds, status);
+        return Result.success();
+    }
+
     
 }

@@ -14,14 +14,9 @@ import java.util.List;
 public interface AlbumPhotoMapper extends BaseMapper<AlbumPhoto> {
 
     /**
-     * 查询影集内所有照片ID
+     * 查询影集内所有未删除照片ID
      */
-    @Select("SELECT photo_id FROM album_photo WHERE album_id = #{albumId}")
+    @Select("SELECT photo_id FROM album_photo WHERE album_id = #{albumId} AND is_deleted = 0")
     List<Long> selectPhotoIdsByAlbumId(Long albumId);
 
-    /**
-     * 查询照片所属的影集ID列表
-     */
-    @Select("SELECT album_id FROM album_photo WHERE photo_id = #{photoId}")
-    List<Long> selectAlbumIdsByPhotoId(Long photoId);
 }

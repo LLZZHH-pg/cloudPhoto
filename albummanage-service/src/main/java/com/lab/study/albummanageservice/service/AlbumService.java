@@ -95,4 +95,6 @@ public interface AlbumService {
     Map<String, List<PictureDTO>> getPicturesByCategory(Integer userId, boolean onlyFirst);
 
     void clearPhotosFromAlbums(List<Long> photoIds);
+
+    void updateAlbumPhotoStatus(List<Long> photoIds, Integer status);
 }

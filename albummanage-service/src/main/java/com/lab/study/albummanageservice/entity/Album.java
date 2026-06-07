@@ -27,9 +27,6 @@ public class Album {
     /** 所属用户ID */
     private Integer userId;
 
-    /** 照片数量（冗余字段，提高查询效率） */
-    private Integer photoCount;
-
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 

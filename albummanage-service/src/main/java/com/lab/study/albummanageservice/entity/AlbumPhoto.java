@@ -23,4 +23,6 @@ public class AlbumPhoto {
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
+
+    private Integer isDeleted;
 }

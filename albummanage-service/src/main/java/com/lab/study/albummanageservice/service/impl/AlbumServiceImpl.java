@@ -59,7 +59,6 @@ public class AlbumServiceImpl implements AlbumService {
         album.setName(request.getName());
         album.setDescription(request.getDescription());
         album.setCoverUrl(request.getCoverUrl());
-        album.setPhotoCount(0);
 
         albumMapper.insert(album);
         return toVO(album, null);
@@ -121,37 +120,41 @@ public class AlbumServiceImpl implements AlbumService {
         List<AlbumVO> voList = albums.stream().map(a -> toVO(a, null)).collect(Collectors.toList());
         List<Long> albumIds = albums.stream().map(Album::getId).collect(Collectors.toList());
 
-        // 1. 批量查询关联表获取第一张图片 ID
+        // 1. 获取所有关联表中未被软删的记录
         List<AlbumPhoto> allRelations = albumPhotoMapper.selectList(
-                new LambdaQueryWrapper<AlbumPhoto>().in(AlbumPhoto::getAlbumId, albumIds)
+                new LambdaQueryWrapper<AlbumPhoto>()
+                        .in(AlbumPhoto::getAlbumId, albumIds)
+                        .eq(AlbumPhoto::getIsDeleted, 0)
         );
 
-        // 提取每个影集对应的第一张图片的ID映射 (AlbumId -> PhotoId)
+        // 2. 统计每个影集的有效照片数量 (AlbumId -> Count)
+        Map<Long, Long> countsMap = allRelations.stream()
+                .collect(Collectors.groupingBy(AlbumPhoto::getAlbumId, Collectors.counting()));
+
+        // 3. 提取每个影集的第一张有效图 (AlbumId -> PhotoId)
         Map<Long, Long> firstPhotoMap = allRelations.stream()
                 .collect(Collectors.groupingBy(
                         AlbumPhoto::getAlbumId,
-                        Collectors.collectingAndThen(Collectors.toList(), list -> list.getFirst().getPhotoId()) // 就取第一张
+                        Collectors.collectingAndThen(Collectors.toList(), list -> list.get(0).getPhotoId())
                 ));
 
-        // 去重需要进行 Feign 远程调用的 PhotoId 进行批量拉取
-        List<Long> requestPhotoIds = firstPhotoMap.values().stream().distinct().collect(Collectors.toList());
+        // 批量回填计数
+        voList.forEach(vo -> vo.setPhotoCount(countsMap.getOrDefault(vo.getId(), 0L).intValue()));
 
+        // 批量请求图片信息并回填封面/预览 (逻辑同之前，但 requestPhotoIds 来自 firstPhotoMap)
+        List<Long> requestPhotoIds = firstPhotoMap.values().stream().distinct().collect(Collectors.toList());
         if (!requestPhotoIds.isEmpty()) {
             try {
                 Result<List<PictureDTO>> feignResult = photoFeign.getPicturesByIds(requestPhotoIds);
                 if (feignResult.getCode() == 200 && feignResult.getData() != null) {
-                    // 转为 PhotoId -> PictureDTO 的 Map 方便 O(1) 提取
                     Map<Long, PictureDTO> photoMap = feignResult.getData().stream()
                             .collect(Collectors.toMap(PictureDTO::getPictureid, p -> p));
 
-                    // 回填数据给 VO，将找到的第一张图片存入 photos 集合返回
                     for (AlbumVO vo : voList) {
                         Long firstId = firstPhotoMap.get(vo.getId());
                         if (firstId != null && photoMap.containsKey(firstId)) {
                             PictureDTO firstPic = photoMap.get(firstId);
                             vo.setPhotos(List.of(firstPic));
-
-                            // 若封面为空，选用首图填补
                             if (vo.getCoverUrl() == null || vo.getCoverUrl().isBlank()) {
                                 vo.setCoverUrl(firstPic.getPreviewUrl());
                             }
@@ -174,6 +177,7 @@ public class AlbumServiceImpl implements AlbumService {
 
         List<Long> photoIds = albumPhotoMapper.selectPhotoIdsByAlbumId(albumId);
         AlbumVO vo = toVO(album, photoIds);
+        vo.setPhotoCount(photoIds.size());
 
         if (photoIds != null && !photoIds.isEmpty()) {
             try {
@@ -226,8 +230,6 @@ public class AlbumServiceImpl implements AlbumService {
             albumPhotoMapper.insert(ap);
         }
 
-        // 更新影集照片计数
-        updatePhotoCount(albumId);
     }
 
     // ─────────────────────────────────────────────────────────
@@ -252,7 +254,6 @@ public class AlbumServiceImpl implements AlbumService {
                         .in(AlbumPhoto::getPhotoId, request.getPhotoIds())
         );
 
-        updatePhotoCount(sourceAlbumId);
         refreshCoverUrl(sourceAlbumId);
     }
 
@@ -304,8 +305,6 @@ public class AlbumServiceImpl implements AlbumService {
             albumPhotoMapper.insert(ap);
         }
 
-        updatePhotoCount(sourceAlbumId);
-        updatePhotoCount(targetAlbumId);
         refreshCoverUrl(sourceAlbumId);
     }
 
@@ -354,7 +353,6 @@ public class AlbumServiceImpl implements AlbumService {
             for (AlbumPhoto ap : toInsert) {
                 albumPhotoMapper.insert(ap);
             }
-            updatePhotoCount(targetAlbumId);
         }
     }
 
@@ -386,12 +384,28 @@ public class AlbumServiceImpl implements AlbumService {
         // 从关联表删除
         albumPhotoMapper.delete(new LambdaQueryWrapper<AlbumPhoto>().in(AlbumPhoto::getPhotoId, photoIds));
 
-        // 更新受影响的影集 photoCount
-        List<Long> affectedAlbumIds = affectedRelations.stream()
-                .map(AlbumPhoto::getAlbumId).distinct().toList();
+        affectedRelations.stream().map(AlbumPhoto::getAlbumId).distinct().forEach(this::refreshCoverUrl);
+    }
 
-        for (Long albumId : affectedAlbumIds) {
-            updatePhotoCount(albumId);
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateAlbumPhotoStatus(List<Long> photoIds, Integer status) {
+        if (photoIds == null || photoIds.isEmpty()) return;
+
+        // 1. 更新关联表状态
+        albumPhotoMapper.update(null,
+                new LambdaUpdateWrapper<AlbumPhoto>()
+                        .in(AlbumPhoto::getPhotoId, photoIds)
+                        .set(AlbumPhoto::getIsDeleted, status)
+        );
+
+        // 2. 查出这批照片散落在哪些影集里，刷新受影响影集的封面
+        List<AlbumPhoto> affected = albumPhotoMapper.selectList(
+                new LambdaQueryWrapper<AlbumPhoto>().in(AlbumPhoto::getPhotoId, photoIds)
+        );
+        List<Long> albumIds = affected.stream().map(AlbumPhoto::getAlbumId).distinct().toList();
+
+        for (Long albumId : albumIds) {
             refreshCoverUrl(albumId);
         }
     }
@@ -412,21 +426,6 @@ public class AlbumServiceImpl implements AlbumService {
             throw new RuntimeException("无权限操作该影集");
         }
         return album;
-    }
-
-    /**
-     * 更新影集照片数量（根据关联表实际计数）
-     */
-    private void updatePhotoCount(Long albumId) {
-        Long count = albumPhotoMapper.selectCount(
-                new LambdaQueryWrapper<AlbumPhoto>()
-                        .eq(AlbumPhoto::getAlbumId, albumId)
-        );
-        albumMapper.update(null,
-                new LambdaUpdateWrapper<Album>()
-                        .eq(Album::getId, albumId)
-                        .set(Album::getPhotoCount, count)
-        );
     }
 
     /**

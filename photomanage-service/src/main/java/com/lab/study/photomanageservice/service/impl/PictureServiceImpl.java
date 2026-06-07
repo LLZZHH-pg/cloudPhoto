@@ -236,8 +236,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
                 .set(Picture::getDeleteTime, deleteLimit);
         this.update(updateWrapper);
 
-        // 同时清理影集关联，避免封面和数量不一致
-        albumFeign.clearPhotosFromAlbums(ids);
+        // 同时禁用影集关联，避免封面和数量不一致
+        albumFeign.updateAlbumPhotoStatus(ids,1);
     }
 
     @Override
@@ -293,6 +293,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
                 .eq(Picture::getUserid, userId)
                 .set(Picture::getDeleteTime, null);
         this.update(updateWrapper);
+
+        albumFeign.updateAlbumPhotoStatus(ids,0);
     }
 
     @Override

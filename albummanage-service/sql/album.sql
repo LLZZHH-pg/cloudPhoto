@@ -26,16 +26,15 @@ DROP TABLE IF EXISTS `album`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `album` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '影集ID',
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '影集名称',
-  `description` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '影集描述',
-  `cover_url` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '封面图片URL',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '影集名称',
+  `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '影集描述',
+  `cover_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '封面图片URL',
   `user_id` bigint NOT NULL COMMENT '所属用户ID',
-  `photo_count` int NOT NULL DEFAULT '0' COMMENT '照片数量',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`),
-  KEY `idx_user_id` (`user_id`),
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='影集表';
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=ujis COMMENT='影集表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -50,12 +49,13 @@ CREATE TABLE `album_photo` (
   `album_id` bigint NOT NULL COMMENT '影集ID',
   `photo_id` bigint NOT NULL COMMENT '照片ID',
   `created_at` datetime DEFAULT NULL COMMENT '添加时间',
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_album_photo` (`album_id`,`photo_id`),
   KEY `idx_album_id` (`album_id`),
   KEY `idx_photo_id` (`photo_id`),
   CONSTRAINT `albumid` FOREIGN KEY (`album_id`) REFERENCES `album` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='影集-照片关联表';
+) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='影集-照片关联表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -67,4 +67,4 @@ CREATE TABLE `album_photo` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-05-24 19:02:57
+-- Dump completed on 2026-06-08  7:27:03
