@@ -28,7 +28,6 @@ import java.util.Map;
  *   POST   /album/photos/remove       从影集移除照片
  *   POST   /album/photos/move         移动照片到其他影集
  *   POST   /album/photos/copy         复制照片到其他影集
- *   GET    /album/public              查询所有公开影集
  */
 @RestController
 @RequestMapping("/album")
@@ -130,14 +129,6 @@ public class AlbumController {
         return Result.success();
     }
 
-    // ─────────────────────────────────────────────────────────
-    // 查询所有公开影集（不需要登录）
-    // ─────────────────────────────────────────────────────────
-    @GetMapping("/public")
-    public Result<List<AlbumVO>> listPublicAlbums() {
-        List<AlbumVO> list = albumService.listPublicAlbums();
-        return Result.success(list);
-    }
 
     // ─────────────────────────────────────────────────────────
     // 查询我的照片 - 按分类分组 (首张图片)
@@ -161,7 +152,7 @@ public class AlbumController {
     // 内部接口
     // ─────────────────────────────────────────────────────────
     @DeleteMapping("/internal/photos/clear")
-    public Result<Void> clearPhotosFromAlbums(@RequestParam("photoIds") List<Long> photoIds) {
+    public Result<Void> clearPhotosFromAlbums(@RequestBody List<Long> photoIds) {
         if (photoIds != null && !photoIds.isEmpty()) {
             albumService.clearPhotosFromAlbums(photoIds);
         }

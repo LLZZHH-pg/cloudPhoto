@@ -45,12 +45,20 @@ public class AlbumServiceImpl implements AlbumService {
             throw new RuntimeException("影集名称不能为空");
         }
 
+        Long count = albumMapper.selectCount(
+                new LambdaQueryWrapper<Album>()
+                        .eq(Album::getUserId, userId)
+                        .eq(Album::getName, request.getName())
+        );
+        if (count > 0) {
+            throw new RuntimeException("已存在同名影集");
+        }
+
         Album album = new Album();
         album.setUserId(userId);
         album.setName(request.getName());
         album.setDescription(request.getDescription());
         album.setCoverUrl(request.getCoverUrl());
-        album.setIsPublic(request.getIsPublic() != null ? request.getIsPublic() : 0);
         album.setPhotoCount(0);
 
         albumMapper.insert(album);
@@ -75,7 +83,16 @@ public class AlbumServiceImpl implements AlbumService {
     public AlbumVO updateAlbum(Integer userId, Long albumId, AlbumRequest request) {
         Album album = getAlbumAndCheckOwner(userId, albumId);
 
-        if (request.getName() != null && !request.getName().isBlank()) {
+        if (request.getName() != null && !request.getName().isBlank()
+                && !request.getName().equals(album.getName())) {
+            Long count = albumMapper.selectCount(
+                    new LambdaQueryWrapper<Album>()
+                            .eq(Album::getUserId, userId)
+                            .eq(Album::getName, request.getName())
+            );
+            if (count > 0) {
+                throw new RuntimeException("已存在同名影集");
+            }
             album.setName(request.getName());
         }
         if (request.getDescription() != null) {
@@ -83,9 +100,6 @@ public class AlbumServiceImpl implements AlbumService {
         }
         if (request.getCoverUrl() != null) {
             album.setCoverUrl(request.getCoverUrl());
-        }
-        if (request.getIsPublic() != null) {
-            album.setIsPublic(request.getIsPublic());
         }
 
         albumMapper.updateById(album);
@@ -166,6 +180,10 @@ public class AlbumServiceImpl implements AlbumService {
                 Result<List<PictureDTO>> picResult = photoFeign.getPicturesByIds(photoIds);
                 if (picResult.getCode() == 200 && picResult.getData() != null) {
                     vo.setPhotos(picResult.getData());
+                    if ((vo.getCoverUrl() == null || vo.getCoverUrl().isBlank())
+                            && !picResult.getData().isEmpty()) {
+                        vo.setCoverUrl(picResult.getData().getFirst().getPreviewUrl());
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -235,6 +253,7 @@ public class AlbumServiceImpl implements AlbumService {
         );
 
         updatePhotoCount(sourceAlbumId);
+        refreshCoverUrl(sourceAlbumId);
     }
 
     // ─────────────────────────────────────────────────────────
@@ -287,6 +306,7 @@ public class AlbumServiceImpl implements AlbumService {
 
         updatePhotoCount(sourceAlbumId);
         updatePhotoCount(targetAlbumId);
+        refreshCoverUrl(sourceAlbumId);
     }
 
     // ─────────────────────────────────────────────────────────
@@ -338,20 +358,6 @@ public class AlbumServiceImpl implements AlbumService {
         }
     }
 
-    // ─────────────────────────────────────────────────────────
-    // 获取所有公开影集
-    // ─────────────────────────────────────────────────────────
-    @Override
-    public List<AlbumVO> listPublicAlbums() {
-        List<Album> albums = albumMapper.selectList(
-                new LambdaQueryWrapper<Album>()
-                        .eq(Album::getIsPublic, 1)
-                        .orderByDesc(Album::getCreatedAt)
-        );
-        return albums.stream()
-                .map(a -> toVO(a, null))
-                .collect(Collectors.toList());
-    }
 
     @Override
     public Map<String, List<PictureDTO>> getPicturesByCategory(Integer userId, boolean onlyFirst) {
@@ -386,6 +392,7 @@ public class AlbumServiceImpl implements AlbumService {
 
         for (Long albumId : affectedAlbumIds) {
             updatePhotoCount(albumId);
+            refreshCoverUrl(albumId);
         }
     }
 
@@ -419,6 +426,29 @@ public class AlbumServiceImpl implements AlbumService {
                 new LambdaUpdateWrapper<Album>()
                         .eq(Album::getId, albumId)
                         .set(Album::getPhotoCount, count)
+        );
+    }
+
+    /**
+     * 刷新影集封面：取关联表中第一条照片的预览URL作为封面
+     */
+    private void refreshCoverUrl(Long albumId) {
+        List<Long> photoIds = albumPhotoMapper.selectPhotoIdsByAlbumId(albumId);
+        String newCover = null;
+        if (photoIds != null && !photoIds.isEmpty()) {
+            try {
+                Result<List<PictureDTO>> result = photoFeign.getPicturesByIds(List.of(photoIds.getFirst()));
+                if (result.getCode() == 200 && result.getData() != null && !result.getData().isEmpty()) {
+                    newCover = result.getData().getFirst().getPreviewUrl();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        albumMapper.update(null,
+                new LambdaUpdateWrapper<Album>()
+                        .eq(Album::getId, albumId)
+                        .set(Album::getCoverUrl, newCover)
         );
     }
 

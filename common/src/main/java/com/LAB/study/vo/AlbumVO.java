@@ -17,7 +17,6 @@ public class AlbumVO {
     private String description;
     private String coverUrl;
     private Integer userId;
-    private Integer isPublic;
     private Integer photoCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

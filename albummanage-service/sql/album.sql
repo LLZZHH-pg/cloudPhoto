@@ -30,13 +30,11 @@ CREATE TABLE `album` (
   `description` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '影集描述',
   `cover_url` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '封面图片URL',
   `user_id` bigint NOT NULL COMMENT '所属用户ID',
-  `is_public` tinyint NOT NULL DEFAULT '0' COMMENT '是否公开：0-私有，1-公开',
   `photo_count` int NOT NULL DEFAULT '0' COMMENT '照片数量',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `idx_user_id` (`user_id`),
-  KEY `idx_is_public` (`is_public`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='影集表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 

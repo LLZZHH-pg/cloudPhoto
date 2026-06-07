@@ -16,7 +16,4 @@ public class AlbumRequest {
 
     /** 封面图片URL */
     private String coverUrl="";
-
-    /** 是否公开：0-私有，1-公开，默认0 */
-    private Integer isPublic = 0;
 }

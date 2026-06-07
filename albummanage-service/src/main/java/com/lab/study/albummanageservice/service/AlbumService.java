@@ -91,12 +91,6 @@ public interface AlbumService {
      */
     void copyPhotos(Integer userId, CopyPhotoRequest request);
 
-    /**
-     * 获取公开影集列表（无需登录）
-     *
-     * @return 公开影集列表
-     */
-    List<AlbumVO> listPublicAlbums();
 
     Map<String, List<PictureDTO>> getPicturesByCategory(Integer userId, boolean onlyFirst);
 

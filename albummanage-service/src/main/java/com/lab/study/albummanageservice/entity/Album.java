@@ -27,9 +27,6 @@ public class Album {
     /** 所属用户ID */
     private Integer userId;
 
-    /** 是否公开：0-私有，1-公开 */
-    private Integer isPublic;
-
     /** 照片数量（冗余字段，提高查询效率） */
     private Integer photoCount;
 
