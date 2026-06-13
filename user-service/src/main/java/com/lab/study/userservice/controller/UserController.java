@@ -95,6 +95,17 @@ public class UserController {
         }
     }
 
+    @PostMapping("/auth/info/update")
+    public Result updateAdminInfo(@RequestBody RegisterDTO dto) {
+        try {
+            checkAdminAuth();
+            userService.updateAdminPassword(dto, currentUserId());
+            return Result.success("密码修改成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
     @GetMapping("/auth/plans/list")
     public Result<List<PlanVO>> getPlansForAuth() {
         try {

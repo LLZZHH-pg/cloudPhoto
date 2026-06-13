@@ -26,6 +26,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -203,8 +205,8 @@ public class UserServiceImpl implements UserService {
             if (pas.length() < 6) {
                 throw new RuntimeException("密码长度不能少于6位");
             }
+
             user.setPas(passwordEncoder.encode(pas));
-            invalidateUserTokens(userId);
         }
         // 电话格式校验
         if (!tel.isEmpty()) {
@@ -242,6 +244,14 @@ public class UserServiceImpl implements UserService {
         }
 
         userMapper.updateById(user);
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronizationAdapter() {
+                    @Override
+                    public void afterCommit() {
+                        invalidateUserTokens(userId);
+                    }
+                }
+        );
     }
 
     private void invalidateUserTokens(Integer userId) {
@@ -369,10 +379,10 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("密码错误，请重试");
         }
 
-        // 1. 生成唯一的 jti
+        // 1. 生成唯一 jti
         String jti = java.util.UUID.randomUUID().toString();
 
-        // 2. 构造专业的 JwtUserDTO
+        // 2. 构造 JwtUserDTO
         com.LAB.study.dto.JwtUserDTO jwtUser = new com.LAB.study.dto.JwtUserDTO();
         jwtUser.setUid(user.getUserId());
 
@@ -398,6 +408,33 @@ public class UserServiceImpl implements UserService {
         result.put("token", token);
         result.put("userInfo", user);
         return result;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateAdminPassword(RegisterDTO dto, Integer adminId) {
+        String pas = dto.getPas() == null ? "" : dto.getPas().trim();
+        if (pas.isEmpty()) {
+            throw new RuntimeException("密码不能为空");
+        }
+        if (pas.length() < 6) {
+            throw new RuntimeException("密码长度不能少于6位");
+        }
+
+        User user = new User();
+        user.setUserId(adminId);
+        user.setPas(passwordEncoder.encode(pas));
+
+        userMapper.updateById(user);
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronizationAdapter() {
+                    @Override
+                    public void afterCommit() {
+                        invalidateUserTokens(adminId);
+                    }
+                }
+        );
     }
 
     @Override

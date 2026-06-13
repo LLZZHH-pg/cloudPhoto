@@ -39,4 +39,6 @@ public interface UserService {
     void deletePlan(Integer planId);
 
     void updateUserStatus(UserStatusRequest request);
+
+    void updateAdminPassword(RegisterDTO dto, Integer adminId);
 }
