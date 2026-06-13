@@ -32,6 +32,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -110,6 +111,11 @@ public class UserServiceImpl implements UserService {
         // 5. 存入 Redis 并返回
         String redisKey = "auth:token:" + jti;
         redisTemplate.opsForValue().set(redisKey, token, jwtExpiration, TimeUnit.MILLISECONDS);
+
+        // 6. 将 jti 加入该用户的 token 集合，TTL 与 JWT 一致
+        String userTokensKey = "user:tokens:" + user.getUserId();
+        redisTemplate.opsForSet().add(userTokensKey, jti);
+        redisTemplate.expire(userTokensKey, jwtExpiration, TimeUnit.MILLISECONDS);
 
         Map<String, Object> result = new HashMap<>();
         result.put("token", token);
@@ -197,8 +203,8 @@ public class UserServiceImpl implements UserService {
             if (pas.length() < 6) {
                 throw new RuntimeException("密码长度不能少于6位");
             }
-
             user.setPas(passwordEncoder.encode(pas));
+            invalidateUserTokens(userId);
         }
         // 电话格式校验
         if (!tel.isEmpty()) {
@@ -236,6 +242,21 @@ public class UserServiceImpl implements UserService {
         }
 
         userMapper.updateById(user);
+    }
+
+    private void invalidateUserTokens(Integer userId) {
+        try {
+            String userTokensKey = "user:tokens:" + userId;
+            Set<String> jtis = redisTemplate.opsForSet().members(userTokensKey);
+            if (jtis != null && !jtis.isEmpty()) {
+                for (String jti : jtis) {
+                    redisTemplate.delete("auth:token:" + jti);
+                }
+            }
+            redisTemplate.delete(userTokensKey);
+        } catch (Exception e) {
+            // 删除失败不影响主流程，token 会随 TTL 自然过期
+        }
     }
 
     @Override
@@ -304,7 +325,7 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("该套餐目前不可用");
         }
 
-        // 修改或插入关联记录（假设一个用户只能有一个激活套餐）
+        // 修改或插入关联记录
         UserPlan up = userPlanMapper.selectOne(Wrappers.<UserPlan>lambdaQuery().eq(UserPlan::getUserid, userId));
         if (up == null) {
             up = new UserPlan();
@@ -367,6 +388,11 @@ public class UserServiceImpl implements UserService {
         // 5. 存入 Redis 并返回
         String redisKey = "auth:token:" + jti;
         redisTemplate.opsForValue().set(redisKey, token, jwtExpiration, TimeUnit.MILLISECONDS);
+
+        // 6. 将 jti 加入该用户的 token 集合，TTL 与 JWT 一致
+        String userTokensKey = "user:tokens:" + user.getUserId();
+        redisTemplate.opsForSet().add(userTokensKey, jti);
+        redisTemplate.expire(userTokensKey, jwtExpiration, TimeUnit.MILLISECONDS);
 
         Map<String, Object> result = new HashMap<>();
         result.put("token", token);
